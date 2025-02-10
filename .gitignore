@@ -1,8 +1,5 @@
 #node.js
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
 
 #Environment files
 .env
@@ -20,5 +17,9 @@ Thumbs.db
 /build/
 
 #log folders
+npm-debug.log
+yarn-debug.log
+yarn-error.log
 **/logs/
 **/logs-prod/
+*.logs
