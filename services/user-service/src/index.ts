@@ -1,7 +1,7 @@
 import http from "http";
 import app from "./app";
-import { dbConnection } from "./config/sequelize";
-import logger from "./utils/logger";
+import { dbConnection } from "./config/sequelize.conf";
+import logger from "./utils/logger.utils";
 
 //creating http server
 const server = http.createServer(app);

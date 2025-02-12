@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import cors from "cors";
-import { createProxyMiddleware } from "http-proxy-middleware";
-import errorHandlingMiddleware from "./middleware/errorHandlingMiddleware";
+import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
+import errorHandlingMiddleware from "./middleware/errorHandling.middleware";
 
 //express app
 const app: Express = express();
@@ -23,10 +23,13 @@ app.use(express.urlencoded({ extended: true }));
 
 //proxy to users-service
 app.use(
-    "/v1/api/users",
+    "/api/v1/users",
     createProxyMiddleware<Request, Response>({
         target: process.env.USER_SERVICE_URL,
         changeOrigin: true,
+        on: {
+            proxyReq: fixRequestBody,
+        },
     }),
 );
 
