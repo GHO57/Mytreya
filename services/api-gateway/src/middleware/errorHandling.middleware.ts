@@ -1,11 +1,11 @@
-import errorHandler from "../utils/errorHandler";
 import { Request, Response, NextFunction } from "express";
+import errorHandler from "../utils/errorHandler.utils";
 
 const errorHandlingMiddleware = (
     err: errorHandler,
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
 ) => {
     let message: string = err.message || "Internal Server Error";
     let statusCode: number = err.statusCode || 500;

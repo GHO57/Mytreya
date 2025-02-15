@@ -1,7 +1,7 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import errorHandlingMiddleware from "./middleware/errorHandlingMiddleware";
+import errorHandlingMiddleware from "./middleware/errorHandling.middleware";
 
 //express app
 const app: Express = express();
@@ -20,7 +20,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-//base APIs
+//api routes
+import admin from "./routes/admin.routes";
+import auth from "./routes/auth.routes";
+
+//admin routes
+app.use("/admins", admin);
+app.use("/auth", auth);
 
 //error handling middleware
 app.use(errorHandlingMiddleware);
