@@ -9,7 +9,7 @@ import { sequelize } from "../config/sequelize.conf";
 class Role extends Model<InferAttributes<Role>, InferCreationAttributes<Role>> {
     declare id?: string;
     declare roleName: string;
-    declare active?: boolean;
+    declare isDeleted?: boolean;
     declare updatedBy?: string;
 }
 
@@ -28,9 +28,9 @@ Role.init(
             unique: true,
             allowNull: false,
         },
-        active: {
+        isDeleted: {
             type: DataTypes.BOOLEAN,
-            defaultValue: true,
+            defaultValue: false,
             unique: false,
             allowNull: false,
         },
@@ -42,8 +42,9 @@ Role.init(
     },
     {
         sequelize,
+        underscored: true,
         modelName: "Role",
-        tableName: "Roles",
+        tableName: "roles",
         timestamps: true,
     },
 );

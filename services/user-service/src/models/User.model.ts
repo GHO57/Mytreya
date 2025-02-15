@@ -5,17 +5,18 @@ import {
     InferCreationAttributes,
     Model,
 } from "sequelize";
+import bcrypt from "bcrypt";
 import { sequelize } from "../config/sequelize.conf";
 import Role from "./Role.model";
 
 class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
-    declare id: string;
+    declare id?: string;
     declare fullName: string;
     declare email: string;
     declare mobileNumber: number;
     declare password: string;
     declare roleId: ForeignKey<string>;
-    declare active: string;
+    declare isDeleted?: boolean;
 }
 
 User.init(
@@ -59,17 +60,33 @@ User.init(
                 key: "id",
             },
         },
-        active: {
-            type: DataTypes.STRING(10),
+        isDeleted: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
             unique: false,
             allowNull: false,
         },
     },
     {
         sequelize,
+        underscored: true,
         modelName: "User",
         tableName: "users",
         timestamps: true,
+        hooks: {
+            //Hash password before saving
+            beforeCreate: async (user) => {
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(user.password, salt);
+            },
+            //Hash password before updating, if modified
+            beforeUpdate: async (user) => {
+                if (user.changed("password")) {
+                    const salt = await bcrypt.genSalt(10);
+                    user.password = await bcrypt.hash(user.password, salt);
+                }
+            },
+        },
     },
 );
 

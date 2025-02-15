@@ -1,23 +1,25 @@
 import {
+    DataTypes,
+    ForeignKey,
     InferAttributes,
     InferCreationAttributes,
     Model,
-    DataTypes,
-    ForeignKey,
 } from "sequelize";
 import { sequelize } from "../config/sequelize.conf";
+import Role from "./Role.model";
+import Permission from "./Permission.model";
 
-class Permission extends Model<
-    InferAttributes<Permission>,
-    InferCreationAttributes<Permission>
+class RolePermission extends Model<
+    InferAttributes<RolePermission>,
+    InferCreationAttributes<RolePermission>
 > {
     declare id?: string;
-    declare permissionName: string;
-    declare description: string;
+    declare roleId: ForeignKey<string>;
+    declare permissionId: ForeignKey<string>;
     declare isDeleted?: boolean;
 }
 
-Permission.init(
+RolePermission.init(
     {
         id: {
             type: DataTypes.UUID,
@@ -27,15 +29,21 @@ Permission.init(
                 isUUID: 4,
             },
         },
-        permissionName: {
-            type: DataTypes.STRING(200),
-            unique: true,
+        roleId: {
+            type: DataTypes.UUID,
             allowNull: false,
+            references: {
+                model: Role,
+                key: "id",
+            },
         },
-        description: {
-            type: DataTypes.STRING,
-            unique: false,
+        permissionId: {
+            type: DataTypes.UUID,
             allowNull: false,
+            references: {
+                model: Permission,
+                key: "id",
+            },
         },
         isDeleted: {
             type: DataTypes.BOOLEAN,
@@ -43,19 +51,14 @@ Permission.init(
             unique: false,
             allowNull: false,
         },
-        // updatedBy: {
-        //     type: DataTypes.STRING(200),
-        //     unique: false,
-        //     allowNull: false,
-        // },
     },
     {
         sequelize,
         underscored: true,
-        modelName: "Permission",
-        tableName: "permissions",
+        modelName: "RolePermission",
+        tableName: "role_permissions",
         timestamps: true,
     },
 );
 
-export default Permission;
+export default RolePermission;
