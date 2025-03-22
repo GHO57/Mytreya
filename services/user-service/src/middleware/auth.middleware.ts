@@ -11,6 +11,7 @@ import logger from "../utils/logger.utils";
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET as Secret;
 
+//check whether user is authenticated
 export const isAuthenticated = asyncHandler(
     async (req: IIsAuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
@@ -29,36 +30,22 @@ export const isAuthenticated = asyncHandler(
                 ACCESS_TOKEN_SECRET,
             ) as JwtPayload;
 
-            const userId = decoded.id;
+            const userId: string = decoded.id;
+            const roleId: string = decoded.roleId;
 
-            //query the corresponding user
-            const user = await User.findOne({
-                include: [{ model: Role, attributes: ["roleName"] }],
-                attributes: [
-                    "id",
-                    "roleId",
-                    "fullName",
-                    "email",
-                    "mobileNumber",
-                    "isDeleted",
-                ],
-                where: { id: userId },
-                raw: true,
-            });
-
-            if (!user) {
+            if (!userId || !roleId) {
                 return next(
                     new errorHandler("Login to access this resource", 401),
                 );
             }
 
-            //assign roleName key with "Role.roleName" value
-            (user as any).roleName = (user as any)["Role.roleName"];
+            //build user object
+            const user = {
+                id: userId,
+                roleId: roleId,
+            };
 
-            //deleting the "Role.roleName" key from the user record
-            delete (user as any)["Role.roleName"];
-
-            //assigning the user record to req.user
+            //assigning the user object to req.user
             req.user = user;
 
             next();
@@ -81,38 +68,37 @@ export const checkPermission = (permission: string) => {
             res: Response,
             next: NextFunction,
         ) => {
-            //get the user's role id
-            const roleId = req.user?.roleId;
-
-            //find all permissions for this role id
-            const permissions = await RolePermission.findAll({
-                include: [
-                    {
-                        model: Permission,
-                        attributes: ["permissionName"],
-                    },
-                ],
-                attributes: [],
-                where: { roleId: roleId, isDeleted: false },
-                raw: true,
-            });
-
-            //map all the permissions to an array
-            const permissionNames = permissions.map(
-                (perm: any) => perm["Permission.permissionName"],
-            );
-
-            //check whether the permission is included in the queried permissions
-            if (!permissionNames.includes(permission)) {
-                return next(
-                    new errorHandler("Cannot access this resource", 403),
-                );
-            }
-
-            //permission granted
-            next();
-
             try {
+                // get the user's role id
+                const roleId = req.user?.roleId as string;
+
+                //find all permissions for this role id
+                const permissions = await RolePermission.findAll({
+                    include: [
+                        {
+                            model: Permission,
+                            attributes: ["permissionName"],
+                        },
+                    ],
+                    attributes: [],
+                    where: { roleId: roleId, isDeleted: false },
+                    raw: true,
+                });
+
+                //map all the permissions to an array
+                const permissionNames = permissions.map(
+                    (perm: any) => perm["Permission.permissionName"],
+                );
+
+                //check whether the permission is included in the queried permissions
+                if (!permissionNames.includes(permission)) {
+                    return next(
+                        new errorHandler("Cannot access this resource", 403),
+                    );
+                }
+
+                //permission granted
+                next();
             } catch (error) {
                 return next(
                     new errorHandler(

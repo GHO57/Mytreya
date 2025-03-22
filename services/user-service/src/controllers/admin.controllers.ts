@@ -1,7 +1,15 @@
 import { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 import asyncHandler from "../middleware/asyncHandler.middleware";
 import errorHandler from "../utils/errorHandler.utils";
-import { Role, Permission, RolePermission } from "../models";
+import {
+    Role,
+    Permission,
+    RolePermission,
+    VendorApplication,
+    Vendor,
+    User,
+} from "../models";
 import {
     IGetAllRolesResponse,
     IAddRoleRequestBody,
@@ -14,9 +22,23 @@ import {
     IGetAllAssignedPermissionsByRoleRequestBody,
     IGetAllAssignedPermissionsByRoleResponse,
     IRevokePermissionRequestBody,
+    IApproveVendorApplicationRequestBody,
+    IRejectVendorApplicationRequestBody,
+    IGetAllVendorApplicationsRequestQuery,
 } from "../interfaces/admin.interfaces";
-import logger from "../utils/logger.utils";
 import { sequelize } from "../config/sequelize.conf";
+import logger from "../utils/logger.utils";
+
+const generateRandomPassword = (length: number = 12) => {
+    const charset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+        const randomIndex = crypto.randomInt(charset.length);
+        password += charset[randomIndex];
+    }
+    return password;
+};
 
 /* controllers */
 
@@ -562,5 +584,246 @@ export const revokePermissionFromRole = asyncHandler(
                 ),
             );
         }
+    },
+);
+
+/*
+*
+*
+vendor application related controllers
+*
+*
+*/
+
+//approve vendor application
+export const approveVendorApplication = asyncHandler(
+    async (
+        req: Request<{}, {}, IApproveVendorApplicationRequestBody>,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const { vendor_application_id } = req.body;
+
+        if (!vendor_application_id) {
+            return next(new errorHandler("Provide vendor application id", 400));
+        }
+
+        try {
+            //check for application existence
+            const existingApplication = await VendorApplication.findOne({
+                where: { id: vendor_application_id },
+            });
+
+            if (!existingApplication) {
+                return next(
+                    new errorHandler("Vendor application not found", 404),
+                );
+            }
+
+            //check whether application already validated
+            if (existingApplication.status !== "PENDING") {
+                return next(
+                    new errorHandler("Application already reviewed", 400),
+                );
+            }
+
+            //get role id of vendor
+            const role = await Role.findOne({
+                where: { roleName: "VENDOR" },
+                attributes: ["id"],
+            });
+
+            if (!role?.id) {
+                return next(new errorHandler("Role not found", 400));
+            }
+
+            //defining roleId as string
+            const roleId: string = role.id;
+            //generate password
+            const password = generateRandomPassword(20);
+
+            //create an user
+
+            await sequelize.transaction(async (t) => {
+                const newUser = await User.create(
+                    {
+                        fullName: existingApplication.fullName,
+                        email: existingApplication.email,
+                        password: password,
+                        roleId: roleId,
+                    },
+                    { transaction: t },
+                );
+
+                if (!newUser || !newUser.id) {
+                    throw new Error("Vendor not created");
+                }
+                //transfer all info to vendors table from vendor_applications table
+                await Vendor.create(
+                    {
+                        userId: newUser.id,
+                        // fullName: existingApplication.fullName,
+                        mobileNumber: existingApplication.mobileNumber,
+                        businessName: existingApplication.businessName,
+                        pincode: existingApplication.pincode,
+                        state: existingApplication.state,
+                        city: existingApplication.city,
+                        completeAddress: existingApplication.completeAddress,
+                        category: existingApplication.category,
+                        qualifications: existingApplication.qualifications,
+                        certificationName:
+                            existingApplication.certificationName,
+                        issuingAuthority: existingApplication.issuingAuthority,
+                        certificationNumber:
+                            existingApplication.certificationNumber,
+                        expirationDate: existingApplication.expirationDate,
+                        experience: existingApplication.experience,
+                        registrationNumber:
+                            existingApplication.registrationNumber,
+                        proofOfCertificationUrl:
+                            existingApplication.proofOfCertificationUrl,
+                        contactMethod: existingApplication.contactMethod,
+                        availability: existingApplication.availability,
+                        status: "APPROVED",
+                    },
+                    { transaction: t },
+                );
+
+                //update the status of vendor application
+                await VendorApplication.update(
+                    { status: "APPROVED" },
+                    { where: { id: vendor_application_id }, transaction: t },
+                );
+            });
+
+            //email the vendor with credentials
+            /*
+             *
+             *   to be implemented
+             *
+             */
+
+            res.status(200).json({
+                success: true,
+                message: "Vendor approved successfully",
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//reject vendor application
+export const rejectVendorApplication = asyncHandler(
+    async (
+        req: Request<{}, {}, IRejectVendorApplicationRequestBody>,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const { vendor_application_id } = req.body;
+
+        /*
+         * might need to get the reason for
+         * rejected, so add 'description'
+         * or 'reason' field to the model
+         */
+
+        if (!vendor_application_id) {
+            return next(new errorHandler("Provide vendor application id", 400));
+        }
+
+        try {
+            //check for application existence
+            const existingApplication = await VendorApplication.findOne({
+                where: { id: vendor_application_id },
+            });
+
+            if (!existingApplication) {
+                return next(
+                    new errorHandler("Vendor application not found", 404),
+                );
+            }
+
+            //check whether application already validated
+            if (existingApplication.status !== "PENDING") {
+                return next(
+                    new errorHandler("Application already reviewed", 400),
+                );
+            }
+
+            //start a transaction
+            await sequelize.transaction(async (t) => {
+                //update the status of vendor application to rejected
+                await VendorApplication.update(
+                    { status: "REJECTED" },
+                    { where: { id: vendor_application_id }, transaction: t },
+                );
+            });
+
+            //email the vendor about the reason for getting rejected
+            /*
+             *
+             * to be implemented
+             *
+             */
+
+            res.status(200).json({
+                success: true,
+                message: "Vendor rejected successfully",
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//get all vendor applications
+export const getAllVendorApplications = asyncHandler(
+    async (
+        req: Request<
+            {},
+            {},
+            {},
+            Partial<IGetAllVendorApplicationsRequestQuery>
+        >,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const { page, limit, status } =
+            req.query as IGetAllVendorApplicationsRequestQuery;
+
+        //pagination setup
+        const pageNumber = parseInt(page, 10) || 1;
+        const limitNumber = parseInt(limit, 10) || 10;
+        const validStatuses = ["APPROVED", "PENDING", "REJECTED"];
+        const applicationStatus = status?.toUpperCase() || "";
+        const offset = (pageNumber - 1) * limitNumber;
+
+        //building where clause
+        const whereCondition = validStatuses.includes(applicationStatus)
+            ? { status: applicationStatus }
+            : {};
+
+        const vendorApplications = await VendorApplication.findAll({
+            where: whereCondition,
+            offset: offset,
+            limit: limitNumber,
+        });
+
+        res.status(200).json({
+            success: true,
+            count: vendorApplications.length,
+            vendorApplications: vendorApplications,
+        });
     },
 );

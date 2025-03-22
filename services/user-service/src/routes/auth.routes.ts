@@ -4,6 +4,8 @@ import {
     loginUser,
     refreshAccessToken,
     logoutUser,
+    getPermissionsByRole,
+    dashboard,
 } from "../controllers/auth.controllers";
 import { isAuthenticated } from "../middleware/auth.middleware";
 
@@ -20,5 +22,19 @@ router.route("/refresh").post(refreshAccessToken);
 
 //logout user -- POST
 router.route("/logout").post(logoutUser);
+
+//user dashboard or user details -- GET
+router.route("/dashboard").get(isAuthenticated, dashboard);
+
+/*
+*
+*
+Routes used for inter service communications
+*
+*
+*/
+
+//all permissions by role id -- GET
+router.route("/permissions/:roleId").get(getPermissionsByRole);
 
 export default router;

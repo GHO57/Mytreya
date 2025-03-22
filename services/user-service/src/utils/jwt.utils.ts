@@ -10,6 +10,7 @@ Interfaces
 //jwt payload interface
 interface IJWTPayload {
     id?: string; //user id
+    roleId?: string;
 }
 
 /*
@@ -65,12 +66,12 @@ const signNewAccessToken = (
             REFRESH_TOKEN_SECRET,
         ) as JwtPayload;
 
-        if (!decoded.id) {
+        if (!decoded.id && !decoded.roleId) {
             return null;
         }
 
         const newAccessToken = jwt.sign(
-            { id: decoded.id } as IJWTPayload,
+            { id: decoded.id, roleId: decoded.roleId } as IJWTPayload,
             ACCESS_TOKEN_SECRET,
             {
                 expiresIn,

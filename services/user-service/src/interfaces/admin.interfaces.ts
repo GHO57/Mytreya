@@ -91,3 +91,28 @@ export interface IRevokePermissionRequestBody {
     roleId: string;
     permissionId: string;
 }
+
+/*
+*
+*
+vendor applications related interfaces
+*
+*
+*/
+
+//approve vendor application interface -- POST
+export interface IApproveVendorApplicationRequestBody {
+    vendor_application_id: string;
+}
+
+//reject vendor application interface -- POST
+export interface IRejectVendorApplicationRequestBody {
+    vendor_application_id: string;
+}
+
+//get all vendor applications interface -- GET
+export interface IGetAllVendorApplicationsRequestQuery {
+    page: string;
+    limit: string;
+    status: string;
+}
