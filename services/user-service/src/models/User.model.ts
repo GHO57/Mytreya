@@ -13,9 +13,10 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
     declare id?: string;
     declare fullName: string;
     declare email: string;
-    declare mobileNumber: number;
+    // declare mobileNumber: number;
     declare password: string;
     declare roleId: ForeignKey<string>;
+    declare onBoarded?: boolean;
     declare isDeleted?: boolean;
 }
 
@@ -30,7 +31,7 @@ User.init(
             },
         },
         fullName: {
-            type: DataTypes.STRING(200),
+            type: DataTypes.STRING,
             unique: false,
             allowNull: false,
         },
@@ -41,11 +42,6 @@ User.init(
             validate: {
                 isEmail: true,
             },
-        },
-        mobileNumber: {
-            type: DataTypes.DECIMAL(12),
-            unique: true,
-            allowNull: false,
         },
         password: {
             type: DataTypes.STRING,
@@ -59,6 +55,12 @@ User.init(
                 model: Role,
                 key: "id",
             },
+        },
+        onBoarded: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            unique: false,
+            allowNull: false,
         },
         isDeleted: {
             type: DataTypes.BOOLEAN,

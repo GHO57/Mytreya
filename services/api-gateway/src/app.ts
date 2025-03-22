@@ -21,11 +21,47 @@ app.use(express.urlencoded({ extended: true }));
 
 //proxy middlewares
 
-//proxy to users-service
+//proxy to user-service
 app.use(
     "/api/v1/users",
     createProxyMiddleware<Request, Response>({
         target: process.env.USER_SERVICE_URL,
+        changeOrigin: true,
+        on: {
+            proxyReq: fixRequestBody,
+        },
+    }),
+);
+
+//proxy to plan-service
+app.use(
+    "/api/v1/plans",
+    createProxyMiddleware<Request, Response>({
+        target: process.env.PLAN_SERVICE_URL,
+        changeOrigin: true,
+        on: {
+            proxyReq: fixRequestBody,
+        },
+    }),
+);
+
+//proxy to payment-service
+app.use(
+    "/api/v1/payments",
+    createProxyMiddleware<Request, Response>({
+        target: process.env.PAYMENT_SERVICE_URL,
+        changeOrigin: true,
+        on: {
+            proxyReq: fixRequestBody,
+        },
+    }),
+);
+
+//proxy to session-service
+app.use(
+    "/api/v1/sessions",
+    createProxyMiddleware<Request, Response>({
+        target: process.env.SESSION_SERVICE_URL,
         changeOrigin: true,
         on: {
             proxyReq: fixRequestBody,

@@ -6,7 +6,7 @@ export interface ISignupUserRequestBody {
     fullName: string;
     email: string;
     password: string;
-    mobileNumber: number;
+    // mobileNumber: number;
 }
 
 //login user interface -- REQUEST
@@ -23,6 +23,18 @@ export interface IRefreshAccessTokenRequestBody {
     };
 }
 
+//get permissions by role id(for other services) interface -- GET
+export interface IGetPermissionsByRoleIdRequestParams {
+    roleId: string;
+}
+
+//user dashboard or user details interface -- GET
+export interface IUserDashboardRequest extends Request {
+    user?: {
+        id: string;
+    };
+}
+
 /*
 *
 *
@@ -36,12 +48,18 @@ export interface IIsAuthenticatedRequest extends Request {
         auth_access_mytreya?: string;
         auth_refresh_mytreya?: string;
     };
-    user?: User;
+    user?: {
+        id: string;
+        roleId: string;
+        roleName?: string;
+    };
 }
 
 //check permission interface -- MIDDLEWARE
 export interface ICheckPermissionRequest extends Request {
     user?: {
-        roleId?: string;
+        id: string;
+        roleId: string;
+        roleName: string;
     };
 }

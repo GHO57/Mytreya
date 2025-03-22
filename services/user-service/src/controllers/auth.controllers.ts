@@ -1,14 +1,15 @@
 import { Request, Response, NextFunction, CookieOptions } from "express";
+import bcrypt from "bcrypt";
 import asyncHandler from "../middleware/asyncHandler.middleware";
 import errorHandler from "../utils/errorHandler.utils";
-import { Role, User } from "../models";
+import { Role, User, Client, RolePermission, Permission } from "../models";
 import {
+    IGetPermissionsByRoleIdRequestParams,
     ILoginUserRequestBody,
     IRefreshAccessTokenRequestBody,
     ISignupUserRequestBody,
+    IUserDashboardRequest,
 } from "../interfaces/auth.interfaces";
-import bcrypt from "bcrypt";
-import logger from "../utils/logger.utils";
 import {
     setAuthCookies,
     setNewAuthCookie,
@@ -16,6 +17,7 @@ import {
     signNewAccessToken,
     signRefreshToken,
 } from "../utils/jwt.utils";
+import logger from "../utils/logger.utils";
 
 /* auth controllers */
 
@@ -26,9 +28,9 @@ export const signupUser = asyncHandler(
         res: Response,
         next: NextFunction,
     ) => {
-        const { fullName, email, password, mobileNumber } = req.body;
+        const { fullName, email, password } = req.body;
 
-        if (!fullName || !email || !password || !mobileNumber) {
+        if (!email || !password) {
             return next(new errorHandler("Provide All Details", 400));
         }
 
@@ -45,7 +47,7 @@ export const signupUser = asyncHandler(
 
             //find customer role(by default)
             const role = await Role.findOne({
-                where: { roleName: "CUSTOMER" },
+                where: { roleName: "CLIENT" },
                 attributes: ["id"],
                 raw: true,
             });
@@ -62,8 +64,13 @@ export const signupUser = asyncHandler(
                 fullName: fullName,
                 email: email,
                 password: password,
-                mobileNumber: mobileNumber,
+                // mobileNumber: mobileNumber,
                 roleId: roleId,
+            });
+
+            //create a record in clients table
+            await Client.create({
+                userId: newUser.id,
             });
 
             res.status(201).json({
@@ -104,8 +111,9 @@ export const loginUser = asyncHandler(
                     "roleId",
                     "fullName",
                     "email",
-                    "mobileNumber",
+                    // "mobileNumber",
                     "password",
+                    "onBoarded",
                     "isDeleted",
                 ],
                 where: { email: email },
@@ -133,8 +141,14 @@ export const loginUser = asyncHandler(
             }
 
             //generate access token & refresh token
-            const accessToken = signAccessToken({ id: user.id });
-            const refreshToken = signRefreshToken({ id: user.id });
+            const accessToken = signAccessToken({
+                id: user.id,
+                roleId: user.roleId,
+            });
+            const refreshToken = signRefreshToken({
+                id: user.id,
+                roleId: user.roleId,
+            });
 
             setAuthCookies(res, accessToken, refreshToken);
 
@@ -223,6 +237,88 @@ export const logoutUser = asyncHandler(
             res.status(200).json({
                 success: true,
                 message: "Logged out successfully",
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//get permissions by role id for other services
+export const getPermissionsByRole = asyncHandler(
+    async (
+        req: Request<IGetPermissionsByRoleIdRequestParams>,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const { roleId } = req.params;
+
+        //find all permissions for this role id
+        const permissions = await RolePermission.findAll({
+            include: [
+                {
+                    model: Permission,
+                    attributes: ["permissionName"],
+                },
+            ],
+            attributes: [],
+            where: { roleId: roleId, isDeleted: false },
+            raw: true,
+        });
+
+        //map all the permissions to an array
+        const permissionNames = permissions.map(
+            (perm: any) => perm["Permission.permissionName"],
+        );
+
+        return res.status(200).json({
+            success: true,
+            permissionNames,
+        });
+    },
+);
+
+//user dashboard or user information
+
+export const dashboard = asyncHandler(
+    async (req: IUserDashboardRequest, res: Response, next: NextFunction) => {
+        const id = req.user?.id;
+
+        if (!id) {
+            return next(new errorHandler("Something went wrong", 500));
+        }
+
+        try {
+            //find existing user
+            const user = await User.findOne({
+                include: [{ model: Role, attributes: ["roleName"] }],
+                attributes: [
+                    "id",
+                    "roleId",
+                    "fullName",
+                    "email",
+                    // "mobileNumber",
+                    "onBoarded",
+                    "isDeleted",
+                ],
+                where: { id: id },
+                raw: true,
+            });
+
+            //assign roleName to user object
+            (user as any).roleName = (user as any)["Role.roleName"];
+
+            //delete the "Role.roleName" key in user
+            delete (user as any)["Role.roleName"];
+
+            res.status(200).json({
+                success: true,
+                user,
             });
         } catch (error) {
             return next(

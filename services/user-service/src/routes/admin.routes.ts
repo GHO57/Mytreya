@@ -10,6 +10,9 @@ import {
     getAllAssignedPermissions,
     getAllPermissionsByRoleId,
     revokePermissionFromRole,
+    approveVendorApplication,
+    rejectVendorApplication,
+    getAllVendorApplications,
 } from "../controllers/admin.controllers";
 import {
     checkPermission,
@@ -98,7 +101,7 @@ router
         getAllAssignedPermissions,
     );
 
-//get all assigned permissions by role id
+//get all assigned permissions by role id -- GET
 router
     .route("/role-permissions/:roleId")
     .get(
@@ -107,7 +110,7 @@ router
         getAllPermissionsByRoleId,
     );
 
-//revoke permission from role by roleid and permission id
+//revoke permission from role by roleid and permission id -- POST
 router
     .route("/role-permissions/revoke")
     .post(
@@ -115,5 +118,28 @@ router
         checkPermission("REVOKE_PERMISSION"),
         revokePermissionFromRole,
     );
+
+/*
+*
+*
+vendor-applications related routes ("/vendor-applications")
+*
+*
+*/
+
+//approve vendor application -- POST
+router
+    .route("/vendor-applications/approve")
+    .post(isAuthenticated, approveVendorApplication);
+
+//reject vendor application -- POST
+router
+    .route("/vendor-applications/reject")
+    .post(isAuthenticated, rejectVendorApplication);
+
+//get all vendor applications -- GET
+router
+    .route("/vendor-applications")
+    .get(isAuthenticated, getAllVendorApplications);
 
 export default router;
