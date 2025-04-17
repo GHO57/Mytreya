@@ -1,1 +1,79 @@
 @import "tailwindcss";
+
+/* * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+} */
+body {
+    font-family: "Inter", Helvetica, sans-serif;
+}
+
+@theme {
+    --color-primary: #fad200;
+    --color-secondary: #f9d100;
+    --color-tertiary: #f6007e;
+    --color-title: #121212;
+    --color-paragraph: #424242;
+    --color-paragraph2: #6a6a6a;
+    --color-black-bg: #212121;
+    --color-black-fg: #2e2e2e;
+    --color-gray-bg: #f7f7f7;
+    --color-stroke: #eaeaea;
+    --font-mulish: "Mulish", sans-serif;
+    --font-bricolage: "Bricolage Grotesque", "Inter", sans-serif;
+    --font-inter: "Inter", Helvetica, sans-serif;
+    --text-md: 16;
+    --inset-shadow-xl: inset -250px -250px 1000px rgba(0, 0, 0, 0.6),
+        inset 250px 250px 1000px rgba(0, 0, 0, 0.6);
+}
+
+.Toastify__toast-theme--dark.Toastify__toast--success {
+    background: white;
+    color: black;
+    font-weight: 500;
+    text-align: center;
+}
+
+.Toastify__toast-theme--dark.Toastify__toast--error {
+    background: white;
+    color: black;
+    font-weight: 500;
+    text-align: center;
+}
+
+.landing-heading {
+    font-family: "Bricolage Grotesque", "Inter", Helvetica, sans-serif;
+    font-optical-sizing: 96;
+    font-size: 54px;
+    font-weight: 900;
+    font-style: normal;
+    line-height: 110%;
+}
+
+.title {
+    font-family: "Bricolage Grotesque", "Inter", Helvetica, sans-serif;
+    font-optical-sizing: 96;
+    font-size: 54;
+    font-weight: 700;
+    font-style: normal;
+}
+
+.paragraph {
+    font-family: "Inter", Helvetica, sans-serif;
+    font-size: 18;
+    font-weight: 300;
+    font-style: normal;
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 5px;
+    min-width: 100px;
+}
