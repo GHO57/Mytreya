@@ -1,8 +1,10 @@
 import express from "express";
 import {
     addVendorAvailabilitySlot,
+    addVendorAvailabilitySlotBulk,
     removeVendorAvailabilitySlot,
     vendorApplication,
+    vendorDashboard,
     viewAllAvailableSlots,
 } from "../controllers/vendor.controllers";
 import { uploadFileDisk } from "../middleware/uploadFile.middleware";
@@ -18,10 +20,15 @@ router
 //add vendor availability slot -- POST
 router.route("/availability-slot/add").post(addVendorAvailabilitySlot);
 
+//add vendor availability slots bulk -- POST
+router.route("/availability-slot/add-bulk").post(addVendorAvailabilitySlotBulk);
+
 //remove vendor availability slot -- POST
 router.route("/availability-slot/remove").post(removeVendorAvailabilitySlot);
 
 //view all availability slots by vendor id
-router.route("/availability-slot/:vendorId").get(viewAllAvailableSlots);
+router.route("/availability-slot/").get(viewAllAvailableSlots);
 
+//vendor dashboard
+router.route("/dashboard").get(isAuthenticated, vendorDashboard);
 export default router;

@@ -8,12 +8,21 @@ import {
     IVendorApplicationRequestBody,
     IRemoveVendorAvailabilitySlotRequestBody,
     IViewAllAvailabilitySlotsRequestParams,
+    IVendorDashboardRequest,
+    IAddVendorAvailabilitySlotBulkRequestBody,
 } from "../interfaces/vendor.interfaces";
-import { User, Vendor, VendorApplication, VendorAvailability } from "../models";
+import {
+    Role,
+    User,
+    Vendor,
+    VendorApplication,
+    VendorAvailability,
+} from "../models";
 import { sequelize } from "../config/sequelize.conf";
 import logger from "../utils/logger.utils";
 import { Op } from "sequelize";
 import { DateTime } from "luxon";
+import { deleteUploadedFile } from "../middleware/uploadFile.middleware";
 
 //get day of the week using date
 const getDayOfWeek = ({ dateString }: { dateString: string }) => {
@@ -117,15 +126,16 @@ export const vendorApplication = asyncHandler(
             !completeAddress ||
             !category ||
             !qualifications ||
-            !certificationName ||
-            !issuingAuthority ||
-            !certificationNumber ||
-            !expirationDate ||
-            !experience ||
+            // !certificationName ||
+            // !issuingAuthority ||
+            // !certificationNumber ||
+            // !expirationDate ||
+            // !experience ||
             !registrationNumber ||
             !contactMethod ||
             !availability
         ) {
+            deleteUploadedFile(req.file?.path);
             return next(new errorHandler("Provide All Required Details", 400));
         }
 
@@ -141,10 +151,11 @@ export const vendorApplication = asyncHandler(
             });
 
             if (existingUser) {
+                deleteUploadedFile(req.file?.path);
                 return next(new errorHandler("Application already exist", 400));
             }
 
-            //check for existing application with status != "APPROVED"
+            //check for existing application with status != "REJECTED"
             const existingApplication = await VendorApplication.findOne({
                 where: {
                     [Op.or]: { mobileNumber, email },
@@ -153,6 +164,7 @@ export const vendorApplication = asyncHandler(
             });
 
             if (existingApplication) {
+                deleteUploadedFile(req.file?.path);
                 return next(new errorHandler("Application already exist", 400));
             }
 
@@ -184,6 +196,8 @@ export const vendorApplication = asyncHandler(
                 message: "Application submitted successfully",
             });
         } catch (error) {
+            deleteUploadedFile(req.file?.path);
+
             return next(
                 new errorHandler(
                     `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
@@ -436,6 +450,150 @@ export const addVendorAvailabilitySlot = asyncHandler(
     },
 );
 
+//add vendor availability range (bulk) -- POST
+export const addVendorAvailabilitySlotBulk = asyncHandler(
+    async (
+        req: Request<{}, {}, IAddVendorAvailabilitySlotBulkRequestBody>,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const { vendorId, slots, timeZone } = req.body;
+
+        if (!vendorId || !timeZone) {
+            return next(new errorHandler("Provide all fields", 400));
+        }
+
+        if (!Array.isArray(slots) || slots.length <= 0) {
+            return next(new errorHandler("Provide atleast 1 slot", 400));
+        }
+
+        try {
+            //check for valid vendor
+            const validVendor = await Vendor.findOne({
+                where: { id: vendorId },
+            });
+
+            if (!validVendor) {
+                return next(new errorHandler("Vendor not found", 404));
+            }
+
+            //get current date of the vendor using timezone
+            const currentDate: string = getVendorCurrentDate({
+                timeZone: timeZone,
+            });
+
+            //get start and end date of the week using current date
+            const { startOfWeek, endOfWeek } = getWeekRange({
+                dateString: currentDate,
+            });
+
+            //get next week's end date
+            const nextWeekEnd = DateTime.fromISO(endOfWeek, {
+                zone: timeZone,
+            })
+                .plus({ weeks: 1 })
+                .toISODate();
+
+            const startDate = startOfWeek;
+            const endDate = nextWeekEnd;
+
+            if (!startDate || !endDate) {
+                return next(
+                    new errorHandler("Save not possible. Try Again.", 400),
+                );
+            }
+
+            let preparedSlots = [];
+
+            for (const slot of slots) {
+                const { availableDate, startTime, endTime } = slot;
+
+                if (!availableDate || !startTime || !endTime) {
+                    return next(new errorHandler("Invalid slot data", 400));
+                }
+
+                //check for existing session
+                const startTimeUTC = String(
+                    LocalTimeToUTC({
+                        date: availableDate,
+                        time: startTime,
+                        timeZone,
+                    }),
+                );
+                const endTimeUTC = String(
+                    LocalTimeToUTC({
+                        date: availableDate,
+                        time: endTime,
+                        timeZone,
+                    }),
+                );
+
+                preparedSlots.push({
+                    vendorId: vendorId,
+                    availableDate: availableDate,
+                    startTimeUtc: startTimeUTC,
+                    endTimeUtc: endTimeUTC,
+                    timeZone: timeZone,
+                });
+            }
+
+            //find overlapping slots
+
+            // Step 1: Sort the slots by date, then by startTimeUtc
+            preparedSlots.sort((a, b) => {
+                if (a.availableDate === b.availableDate) {
+                    return a.startTimeUtc.localeCompare(b.startTimeUtc);
+                }
+                return a.availableDate.localeCompare(b.availableDate);
+            });
+
+            // Step 2: Validate overlapping within same day
+            for (let i = 1; i < preparedSlots.length; i++) {
+                const prev = preparedSlots[i - 1];
+                const curr = preparedSlots[i];
+
+                if (
+                    prev.availableDate === curr.availableDate &&
+                    curr.startTimeUtc < prev.endTimeUtc // overlap
+                ) {
+                    return next(
+                        new errorHandler(
+                            `Overlapping slots found on ${curr.availableDate}`,
+                            400,
+                        ),
+                    );
+                }
+            }
+
+            await VendorAvailability.destroy({
+                where: {
+                    vendorId: vendorId,
+                    availableDate: {
+                        [Op.between]: [startDate, endDate],
+                    },
+                },
+            });
+
+            //add bulk availability slots
+            if (preparedSlots.length > 0) {
+                await VendorAvailability.bulkCreate(preparedSlots);
+            }
+
+            res.status(201).json({
+                success: true,
+                message: `Slots saved successfully`,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
 //remove vendor availability slot -- POST
 export const removeVendorAvailabilitySlot = asyncHandler(
     async (
@@ -505,11 +663,11 @@ export const removeVendorAvailabilitySlot = asyncHandler(
 //view all my available slots(vendor) -- GET
 export const viewAllAvailableSlots = asyncHandler(
     async (
-        req: Request<IViewAllAvailabilitySlotsRequestParams>,
+        req: Request<{}, {}, {}, IViewAllAvailabilitySlotsRequestParams>,
         res: Response,
         next: NextFunction,
     ) => {
-        const { vendorId } = req.params;
+        const { vendorId, timeZone } = req.query;
 
         if (!vendorId) {
             return next(new errorHandler("Provide vendor id", 400));
@@ -547,17 +705,43 @@ export const viewAllAvailableSlots = asyncHandler(
                 return next(new errorHandler("No slots found", 404));
             }
 
-            //add day of the week to each of the records
-            const slotsWithDay = slots.map((slot) => ({
-                ...slot.toJSON(),
-                dayOfWeek: getDayOfWeek({ dateString: slot.availableDate }),
-            }));
+            // //add day of the week to each of the records
+            // const slotsWithDay = slots.map((slot) => ({
+            //     ...slot.toJSON(),
+            //     dayOfWeek: getDayOfWeek({ dateString: slot.availableDate }),
+            // }));
+            //
 
-            const timeZone = slots[0].timeZone;
+            const currentTimeZone = timeZone || slots[0].timeZone;
+
+            const slotsWithDay = slots.map((slot) => {
+                const slotJSON = slot.toJSON();
+
+                // Convert UTC to vendor's timezone
+                const localStartTime = UTCToLocalTime({
+                    dateTime: slotJSON.startTimeUtc,
+                    timeZone: currentTimeZone,
+                });
+
+                const localEndTime = UTCToLocalTime({
+                    dateTime: slotJSON.endTimeUtc,
+                    timeZone: currentTimeZone,
+                });
+
+                return {
+                    ...slotJSON,
+                    startTimeLocal: localStartTime.toISO(),
+                    endTimeLocal: localEndTime.toISO(),
+                    availableDate: localStartTime.toISODate(), // update date to local date
+                    dayOfWeek: getDayOfWeek({
+                        dateString: localStartTime.toISODate(),
+                    }),
+                };
+            });
 
             //get current date of the vendor using timezone
             const currentDate: string = getVendorCurrentDate({
-                timeZone: timeZone,
+                timeZone: currentTimeZone,
             });
 
             //get start and end date of the week using current date
@@ -567,14 +751,14 @@ export const viewAllAvailableSlots = asyncHandler(
 
             //get next week's start date
             const nextWeekStart = DateTime.fromISO(startOfWeek, {
-                zone: timeZone,
+                zone: currentTimeZone,
             })
                 .plus({ weeks: 1 })
                 .toISODate();
 
             //get next week's end date
             const nextWeekEnd = DateTime.fromISO(endOfWeek, {
-                zone: timeZone,
+                zone: currentTimeZone,
             })
                 .plus({ weeks: 1 })
                 .toISODate();
@@ -601,6 +785,62 @@ export const viewAllAvailableSlots = asyncHandler(
                 vendorId: vendorId,
                 currentWeekSlots,
                 nextWeekSlots,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//vendor dashboard
+export const vendorDashboard = asyncHandler(
+    async (req: IVendorDashboardRequest, res: Response, next: NextFunction) => {
+        const id = req.user?.id;
+
+        if (!id) {
+            return next(new errorHandler("Something went wrong", 500));
+        }
+
+        try {
+            //find existing user
+            const userInfo = await User.findOne({
+                include: [{ model: Role, attributes: ["roleName"] }],
+                attributes: [
+                    "fullName",
+                    "email",
+                    "roleId",
+                    "onBoarded",
+                    "isDeleted",
+                ],
+                where: { id: id },
+                raw: true,
+            });
+
+            //assign roleName to user object
+            (userInfo as any).roleName = (userInfo as any)["Role.roleName"];
+
+            //delete the "Role.roleName" key in user
+            delete (userInfo as any)["Role.roleName"];
+
+            //find existing vendor
+            const vendorInfo = await Vendor.findOne({
+                where: { userId: id },
+            });
+
+            //construct user object
+            const user = {
+                ...(vendorInfo?.toJSON() || {}),
+                ...userInfo,
+            };
+
+            res.status(200).json({
+                success: true,
+                user,
             });
         } catch (error) {
             return next(

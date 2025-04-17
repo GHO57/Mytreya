@@ -1,5 +1,5 @@
 import { Role, Permission, RolePermission } from "../models";
-
+import { Request } from "express";
 /* Interfaces */
 
 /*
@@ -116,3 +116,11 @@ export interface IGetAllVendorApplicationsRequestQuery {
     limit: string;
     status: string;
 }
+
+/*
+ *
+ *
+ *
+ *
+ *
+ */

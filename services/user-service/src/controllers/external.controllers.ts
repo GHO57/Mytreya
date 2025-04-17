@@ -126,3 +126,40 @@ export const isVendorAvailable = asyncHandler(
         }
     },
 );
+
+//get vendor id by userId
+export const getVendorId = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return next(new errorHandler("Provide user id", 400));
+        }
+
+        try {
+            //get vendor id
+            const vendor = await Vendor.findOne({
+                where: { userId: userId },
+                attributes: ["id"],
+            });
+
+            if (!vendor) {
+                return res.status(400).json({
+                    success: false,
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                vendorId: vendor.id,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);

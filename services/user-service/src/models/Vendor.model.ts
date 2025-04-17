@@ -22,11 +22,11 @@ class Vendor extends Model<
     declare completeAddress: string;
     declare category: string;
     declare qualifications: string;
-    declare certificationName: string;
-    declare issuingAuthority: string;
-    declare certificationNumber: number;
-    declare expirationDate: string;
-    declare experience: number;
+    declare certificationName?: string;
+    declare issuingAuthority?: string;
+    declare certificationNumber?: number;
+    declare expirationDate?: string;
+    declare experience?: number;
     declare profileImageUrl?: string;
     declare languages?: string[];
     declare bio?: string;
@@ -101,27 +101,27 @@ Vendor.init(
         certificationName: {
             type: DataTypes.STRING(200),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         issuingAuthority: {
             type: DataTypes.STRING(200),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         certificationNumber: {
             type: DataTypes.DECIMAL(30),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         expirationDate: {
             type: DataTypes.DATE,
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         experience: {
             type: DataTypes.DECIMAL(10),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         profileImageUrl: {
             type: DataTypes.STRING(200),

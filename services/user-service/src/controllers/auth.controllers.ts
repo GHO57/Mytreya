@@ -2,7 +2,14 @@ import { Request, Response, NextFunction, CookieOptions } from "express";
 import bcrypt from "bcrypt";
 import asyncHandler from "../middleware/asyncHandler.middleware";
 import errorHandler from "../utils/errorHandler.utils";
-import { Role, User, Client, RolePermission, Permission } from "../models";
+import {
+    Role,
+    User,
+    Client,
+    RolePermission,
+    Permission,
+    Vendor,
+} from "../models";
 import {
     IGetPermissionsByRoleIdRequestParams,
     ILoginUserRequestBody,
@@ -295,14 +302,12 @@ export const dashboard = asyncHandler(
 
         try {
             //find existing user
-            const user = await User.findOne({
+            const userInfo = await User.findOne({
                 include: [{ model: Role, attributes: ["roleName"] }],
                 attributes: [
-                    "id",
-                    "roleId",
                     "fullName",
                     "email",
-                    // "mobileNumber",
+                    "roleId",
                     "onBoarded",
                     "isDeleted",
                 ],
@@ -311,10 +316,53 @@ export const dashboard = asyncHandler(
             });
 
             //assign roleName to user object
-            (user as any).roleName = (user as any)["Role.roleName"];
+            (userInfo as any).roleName = (userInfo as any)["Role.roleName"];
 
             //delete the "Role.roleName" key in user
-            delete (user as any)["Role.roleName"];
+            delete (userInfo as any)["Role.roleName"];
+
+            const roleName = (userInfo as any).roleName;
+
+            //user object
+            let user = {};
+
+            //conditionally query user information
+            if (String(roleName).toUpperCase() === "CLIENT") {
+                //find existing client
+                const clientInfo = await Client.findOne({
+                    where: { userId: id },
+                    attributes: [
+                        "id",
+                        "userId",
+                        "age",
+                        "gender",
+                        "pincode",
+                        "preferredLanguages",
+                        "mobileNumber",
+                    ],
+                });
+
+                //construct user object
+                user = {
+                    ...(clientInfo?.toJSON() || {}),
+                    ...userInfo,
+                };
+            } else if (String(roleName).toUpperCase() === "VENDOR") {
+                //find existing vendor
+                const vendorInfo = await Vendor.findOne({
+                    where: { userId: id },
+                });
+
+                //construct user object
+                user = {
+                    ...(vendorInfo?.toJSON() || {}),
+                    ...userInfo,
+                };
+            } else {
+                user = {
+                    ...userInfo,
+                };
+            }
 
             res.status(200).json({
                 success: true,

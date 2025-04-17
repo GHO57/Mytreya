@@ -98,11 +98,11 @@ const setAuthCookies = (
 
     res.cookie("auth_access_mytreya", accessToken, {
         ...cookieOptions,
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        maxAge: 10 * 24 * 60 * 60 * 1000, // 15 minutes
     });
     res.cookie("auth_refresh_mytreya", refreshToken, {
         ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 10 * 24 * 60 * 60 * 1000, // 7 days
         path: "/refresh",
     });
 };

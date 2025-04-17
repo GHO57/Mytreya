@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import multer from "multer";
 import errorHandler from "../utils/errorHandler.utils";
 import path from "path";
+import fs from "fs";
+import logger from "../utils/logger.utils";
 
 //multer storage type
 const memStorage = multer.memoryStorage();
@@ -54,4 +56,11 @@ const uploadFileDisk = multer({
     fileFilter: fileFilter,
 });
 
-export { uploadFileMem, uploadFileDisk };
+const deleteUploadedFile = (filePath?: string) => {
+    if (!filePath) return;
+    fs.unlink(filePath, (err) => {
+        if (err) logger.error("Failed to delete file:", err);
+    });
+};
+
+export { uploadFileMem, uploadFileDisk, deleteUploadedFile };
