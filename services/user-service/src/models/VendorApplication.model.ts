@@ -21,15 +21,16 @@ class VendorApplication extends Model<
     declare completeAddress: string;
     declare category: string;
     declare qualifications: string;
-    declare certificationName: string;
-    declare issuingAuthority: string;
-    declare certificationNumber: number;
-    declare expirationDate: string;
-    declare experience: number;
+    declare certificationName?: string;
+    declare issuingAuthority?: string;
+    declare certificationNumber?: number;
+    declare expirationDate?: string;
+    declare experience?: number;
     declare registrationNumber: number;
     declare proofOfCertificationUrl: string;
     declare contactMethod: string;
     declare availability: string;
+    declare description?: string;
     declare status?: string;
     declare isDeleted?: boolean;
 }
@@ -100,27 +101,27 @@ VendorApplication.init(
         certificationName: {
             type: DataTypes.STRING(200),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         issuingAuthority: {
             type: DataTypes.STRING(200),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         certificationNumber: {
             type: DataTypes.DECIMAL(30),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         expirationDate: {
             type: DataTypes.DATE,
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         experience: {
             type: DataTypes.DECIMAL(10),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         registrationNumber: {
             type: DataTypes.DECIMAL(50),
@@ -141,6 +142,11 @@ VendorApplication.init(
             type: DataTypes.STRING(200),
             unique: false,
             allowNull: false,
+        },
+        description: {
+            type: DataTypes.TEXT,
+            unique: false,
+            allowNull: true,
         },
         status: {
             type: DataTypes.STRING(200),

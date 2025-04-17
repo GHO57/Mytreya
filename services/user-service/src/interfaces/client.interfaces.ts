@@ -15,3 +15,10 @@ export interface IClientOnboardRequestBody extends Request {
         roleId: string;
     };
 }
+
+//client dashboard interface -- POST
+export interface IClientDashboardRequest extends Request {
+    user?: {
+        id: string;
+    };
+}

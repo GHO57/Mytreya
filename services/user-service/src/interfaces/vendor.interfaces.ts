@@ -47,6 +47,17 @@ export interface IAddVendorAvailabilitySlotRequestBody {
     timeZone: string;
 }
 
+//add vendor availability bulk interface -- POST
+export interface IAddVendorAvailabilitySlotBulkRequestBody {
+    vendorId: string;
+    slots: {
+        availableDate: string;
+        startTime: string;
+        endTime: string;
+    };
+    timeZone: string;
+}
+
 //remove vendor availability interface -- POST
 export interface IRemoveVendorAvailabilitySlotRequestBody {
     slotId: string;
@@ -56,4 +67,12 @@ export interface IRemoveVendorAvailabilitySlotRequestBody {
 //view all vendor availability slots interface -- GET
 export interface IViewAllAvailabilitySlotsRequestParams {
     vendorId: string;
+    timeZone: string;
+}
+
+//vendor dashboard interface -- POST
+export interface IVendorDashboardRequest extends Request {
+    user?: {
+        id: string;
+    };
 }

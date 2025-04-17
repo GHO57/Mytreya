@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import errorHandler from "../utils/errorHandler.utils";
 import asyncHandler from "../middleware/asyncHandler.middleware";
-import { IClientOnboardRequestBody } from "../interfaces/client.interfaces";
+import {
+    IClientDashboardRequest,
+    IClientOnboardRequestBody,
+} from "../interfaces/client.interfaces";
 import { Role, Client, User } from "../models";
 import { sequelize } from "../config/sequelize.conf";
 import logger from "../utils/logger.utils";
@@ -95,6 +98,71 @@ export const clientOnboarding = asyncHandler(
             res.status(200).json({
                 success: true,
                 message: "Client onboarding completed",
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//client dashboard
+export const clientDashboard = asyncHandler(
+    async (req: IClientDashboardRequest, res: Response, next: NextFunction) => {
+        const id = req.user?.id;
+
+        if (!id) {
+            return next(new errorHandler("Something went wrong", 500));
+        }
+
+        try {
+            //find existing user
+            const userInfo = await User.findOne({
+                include: [{ model: Role, attributes: ["roleName"] }],
+                attributes: [
+                    "fullName",
+                    "email",
+                    "roleId",
+                    "onBoarded",
+                    "isDeleted",
+                ],
+                where: { id: id },
+                raw: true,
+            });
+
+            //assign roleName to user object
+            (userInfo as any).roleName = (userInfo as any)["Role.roleName"];
+
+            //delete the "Role.roleName" key in user
+            delete (userInfo as any)["Role.roleName"];
+
+            //find existing client
+            const clientInfo = await Client.findOne({
+                where: { userId: id },
+                attributes: [
+                    "id",
+                    "userId",
+                    "age",
+                    "gender",
+                    "pincode",
+                    "preferredLanguages",
+                    "mobileNumber",
+                ],
+            });
+
+            //construct user object
+            const user = {
+                ...(clientInfo?.toJSON() || {}),
+                ...userInfo,
+            };
+
+            res.status(200).json({
+                success: true,
+                user,
             });
         } catch (error) {
             return next(
