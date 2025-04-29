@@ -1,35 +1,20 @@
-import { Tab, Tabs, Box } from "@mui/material";
-import { useState } from "react";
+import { Tab, Tabs } from "@mui/material";
 
-interface IData {
-    id: string;
-    [key: string]: any;
+interface CustomTabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
 }
 
-interface ITabView<T> {
-    data: T[];
+interface CustomTabProps {
+    tabValue: number;
+    handleTabChange: (event: React.SyntheticEvent, newValue: number) => void;
     tabs: string[];
-    filterFunction: (tab: string, data: T[]) => T[];
-    renderContent: (filteredData: T[]) => React.ReactNode;
 }
 
-const TabView = <T extends IData>({
-    data,
-    tabs,
-    filterFunction,
-    renderContent,
-}: ITabView<T>) => {
-    const [tabValue, setTabValue] = useState<number>(0);
-
-    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-        setTabValue(newValue);
-    };
-
-    const currentTab = tabs[tabValue];
-    const filteredData = filterFunction(currentTab, data);
-
+const CustomTab = ({ tabValue, handleTabChange, tabs }: CustomTabProps) => {
     return (
-        <Box>
+        <>
             <Tabs
                 value={tabValue}
                 onChange={handleTabChange}
@@ -42,10 +27,23 @@ const TabView = <T extends IData>({
                     <Tab key={tab} value={index} label={tab} id={tab} />
                 ))}
             </Tabs>
-
-            <Box mt={2}>{renderContent(filteredData)}</Box>
-        </Box>
+        </>
     );
 };
 
-export default TabView;
+const CustomTabPanel = ({
+    children,
+    value,
+    index,
+    ...other
+}: CustomTabPanelProps) => {
+    return (
+        <>
+            <div role="tabpanel" hidden={value !== index} {...other}>
+                {value === index && <>{children}</>}
+            </div>
+        </>
+    );
+};
+
+export { CustomTab, CustomTabPanel };

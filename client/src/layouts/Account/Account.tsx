@@ -8,10 +8,16 @@ import {
     Tooltip,
 } from "@mui/material";
 import { useState } from "react";
-import { useSelector } from "react-redux";
-import { RootState } from "../../store";
-
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../store";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import { Link, useNavigate } from "react-router-dom";
+import { logoutUser } from "../../features/user/userThunks";
+import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 const Account = () => {
+    const dispatch = useDispatch<AppDispatch>();
+    const navigate = useNavigate();
     const { user } = useSelector((state: RootState) => state.user);
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -21,6 +27,18 @@ const Account = () => {
     };
     const handleClose = () => {
         setAnchorEl(null);
+    };
+
+    const handleLogout = () => {
+        setAnchorEl(null);
+        dispatch(logoutUser())
+            .unwrap()
+            .then((response) => {
+                if (response.success) {
+                    navigate("/");
+                    location.reload();
+                }
+            });
     };
     return (
         <>
@@ -53,6 +71,7 @@ const Account = () => {
                             overflow: "visible",
                             filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
                             mt: 1.5,
+
                             "& .MuiAvatar-root": {
                                 width: 32,
                                 height: 32,
@@ -77,28 +96,35 @@ const Account = () => {
                 transformOrigin={{ horizontal: "right", vertical: "top" }}
                 anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
-                <MenuItem onClick={handleClose}>
-                    <Avatar /> Profile
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <Avatar /> My account
-                </MenuItem>
+                <Link
+                    to={
+                        user?.roleName.toUpperCase() !== "CLIENT"
+                            ? user?.roleName.toUpperCase() === "VENDOR"
+                                ? "/vendor/dashboard"
+                                : "/admin/dashboard"
+                            : "/dashboard"
+                    }
+                    className="w-full"
+                >
+                    <MenuItem onClick={handleClose}>
+                        <ListItemIcon>
+                            <SpaceDashboardIcon fontSize="medium" />
+                        </ListItemIcon>{" "}
+                        Dashboard
+                    </MenuItem>
+                </Link>
+                <Link to={"/account"}>
+                    <MenuItem onClick={handleClose}>
+                        <ListItemIcon>
+                            <SettingsRoundedIcon fontSize="small" />
+                        </ListItemIcon>
+                        Settings
+                    </MenuItem>
+                </Link>
                 <Divider />
-                <MenuItem onClick={handleClose}>
+                <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
-                        {/* <PersonAdd fontSize="small" /> */}
-                    </ListItemIcon>
-                    Add another account
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <ListItemIcon>
-                        {/* <Settings fontSize="small" /> */}
-                    </ListItemIcon>
-                    Settings
-                </MenuItem>
-                <MenuItem onClick={handleClose}>
-                    <ListItemIcon>
-                        {/* <Logout fontSize="small" /> */}
+                        <LogoutRoundedIcon fontSize="small" />
                     </ListItemIcon>
                     Logout
                 </MenuItem>

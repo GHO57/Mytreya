@@ -1,5 +1,6 @@
 import express from "express";
 import {
+    getAllCounsellingAdmins,
     getVendorId,
     isVendorAvailable,
     validUser,
@@ -18,5 +19,8 @@ router.route("/check-availability/vendor").post(isVendorAvailable);
 
 //get vendor id by userId
 router.route("/vendor/:userId").get(getVendorId);
+
+//get all counselling admins
+router.route("/admin/counselling-admins").get(getAllCounsellingAdmins);
 
 export default router;

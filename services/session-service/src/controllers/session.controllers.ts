@@ -1,20 +1,23 @@
 import asyncHandler from "../middleware/asyncHandler.middleware";
 import errorHandler from "../utils/errorHandler.utils";
-import { Session } from "../models";
+import { ClientIntake, Session } from "../models";
 import { Request, Response, NextFunction } from "express";
 import logger from "../utils/logger.utils";
 import {
+    IAssignClientWithAdminRequest,
+    IBookConsultationSessionRequest,
     IConfirmSessionsRequest,
-    ICreateClientSessionRequest,
     ICreateClientSessionsInBulkRequest,
     IGetAllClientSessions,
     IGetAllVendorSessions,
+    IGetClientConsultationRequests,
     ILocalTimeToUTCInterface,
     IUTCToLocalTimeInteface,
 } from "../interfaces/session.interfaces";
 import axiosInstance from "../utils/axiosInstance.utils";
 import { Op } from "sequelize";
 import { DateTime } from "luxon";
+import { sequelize } from "../config/sequelize.conf";
 
 //convert local time to UTC time
 const LocalTimeToUTC = ({
@@ -39,33 +42,56 @@ const UTCToLocalTime = ({
     return localTime;
 };
 
-//create client session -- POST
+const addHoursToUTC = ({
+    dateTime,
+    hours,
+}: {
+    dateTime: string;
+    hours: number;
+}): DateTime => {
+    const updatedTime = DateTime.fromISO(dateTime, { zone: "utc" })
+        .plus({ hours: hours })
+        .toUTC();
+    return updatedTime;
+};
 
-export const createClientSession = asyncHandler(
+const timeZoneToDate = ({ timeZone }: { timeZone: string }) => {
+    return DateTime.now().setZone(timeZone).toFormat("yyyy-MM-dd");
+};
+
+//assign client with counselling admin -- POST
+
+export const assignClientWithAdmin = asyncHandler(
     async (
-        req: ICreateClientSessionRequest,
+        req: IAssignClientWithAdminRequest,
         res: Response,
         next: NextFunction,
     ) => {
-        const userId = req.user?.id;
-        const { vendorId, sessionDate, startTime, endTime, timeZone } =
+        // const userId = req.user?.id;
+        const { userId, adminUserId, sessionDate, startTimeUTC, timeZone } =
             req.body;
 
-        if (!userId || !vendorId || !sessionDate || !startTime || !endTime) {
+        if (
+            !userId ||
+            !adminUserId ||
+            !sessionDate ||
+            !startTimeUTC ||
+            !timeZone
+        ) {
             return next(new errorHandler("Provide all field", 400));
         }
 
         try {
-            //check for valid vendor
-            const { data: validVendor } = await axiosInstance.get(
-                `${process.env.API_GATEWAY_URL}/api/v1/users/externals/check-exist/vendor/${vendorId}`,
+            //check for valid admin user
+            const { data: validAdminUser } = await axiosInstance.get(
+                `${process.env.API_GATEWAY_URL}/api/v1/users/externals/check-exist/user/${adminUserId}`,
             );
 
-            if (!validVendor.success) {
-                return next(new errorHandler("Invalid vendor id", 400));
+            if (!validAdminUser.success) {
+                return next(new errorHandler("Invalid admin user id", 400));
             }
 
-            //check for valid user
+            // check for valid user
             const { data: validUser } = await axiosInstance.get(
                 `${process.env.API_GATEWAY_URL}/api/v1/users/externals/check-exist/user/${userId}`,
             );
@@ -75,26 +101,18 @@ export const createClientSession = asyncHandler(
             }
 
             //convert client's localtime to utc
-            const startTimeUTC = String(
-                LocalTimeToUTC({
-                    date: sessionDate,
-                    time: startTime,
-                    timeZone: timeZone,
-                }),
-            );
 
             const endTimeUTC = String(
-                LocalTimeToUTC({
-                    date: sessionDate,
-                    time: endTime,
-                    timeZone: timeZone,
+                addHoursToUTC({
+                    dateTime: startTimeUTC,
+                    hours: 3,
                 }),
             );
 
-            //check for already booked slot
+            // check for already booked slot
             const isSlotBooked = await Session.findOne({
                 where: {
-                    vendorId: vendorId,
+                    adminUserId: adminUserId,
                     sessionDate: sessionDate,
                     [Op.or]: [
                         {
@@ -109,7 +127,11 @@ export const createClientSession = asyncHandler(
                         },
                         {
                             [Op.and]: [
-                                { startTimeUtc: { [Op.lte]: startTimeUTC } },
+                                {
+                                    startTimeUtc: {
+                                        [Op.lte]: startTimeUTC,
+                                    },
+                                },
                                 { endTimeUtc: { [Op.gte]: endTimeUTC } },
                             ],
                         },
@@ -118,52 +140,29 @@ export const createClientSession = asyncHandler(
             });
 
             if (isSlotBooked) {
-                return next(new errorHandler("Slot already booked", 400));
-            }
-
-            //build form
-            const vendorAvailabilityForm = {
-                vendorId: vendorId,
-                date: sessionDate,
-                startTimeUTC: startTimeUTC,
-                endTimeUTC: endTimeUTC,
-            };
-
-            //json config
-            const config = {
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            };
-
-            //check whether vendor is availability
-            const { data: isVendorAvailable } = await axiosInstance.post(
-                `${process.env.API_GATEWAY_URL}/api/v1/users/externals/check-availability/vendor`,
-                vendorAvailabilityForm,
-                config,
-            );
-
-            if (!isVendorAvailable.success) {
                 return next(
-                    new errorHandler(
-                        "Vendor not available on specified date",
-                        400,
-                    ),
+                    new errorHandler("Slot already booked for that date", 400),
                 );
             }
 
             //create session details
             await Session.create({
                 userId: userId,
-                vendorId: vendorId,
+                adminUserId: adminUserId,
                 sessionDate: sessionDate,
                 startTimeUtc: startTimeUTC,
                 endTimeUtc: endTimeUTC,
             });
 
+            //change the status of the pending request
+            await ClientIntake.update(
+                { status: "BOOKED" },
+                { where: { userId: userId } },
+            );
+
             res.status(201).json({
                 success: true,
-                message: "Session booked successfully",
+                message: "Client assigned successfully",
             });
         } catch (error) {
             return next(
@@ -185,7 +184,7 @@ export const createClientSessionsInBulk = asyncHandler(
         next: NextFunction,
     ) => {
         const userId = req.user?.id;
-        //sessions = [{vendorId, sessionDate, startTime, endTime}, ...]
+        //sessions = [{vendorId, recommendedServiceId, pricingId, sessionDate, startTime, endTime}, ...]
         const { sessions, timeZone } = req.body;
 
         if (!userId || !timeZone) {
@@ -212,9 +211,23 @@ export const createClientSessionsInBulk = asyncHandler(
 
             //check whether all slots are available
             for (const session of sessions) {
-                const { vendorId, sessionDate, startTime, endTime } = session;
+                const {
+                    vendorId,
+                    recommendedServiceId,
+                    pricingId,
+                    sessionDate,
+                    startTime,
+                    endTime,
+                } = session;
 
-                if (!vendorId || !sessionDate || !startTime || !endTime) {
+                if (
+                    !vendorId ||
+                    !recommendedServiceId ||
+                    !pricingId ||
+                    !sessionDate ||
+                    !startTime ||
+                    !endTime
+                ) {
                     unavailableSessions.push(session);
                     continue;
                 }
@@ -318,7 +331,14 @@ export const createClientSessionsInBulk = asyncHandler(
             const createdSessions: any[] = [];
 
             for (const session of sessions) {
-                const { vendorId, sessionDate, startTime, endTime } = session;
+                const {
+                    vendorId,
+                    recommendedServiceId,
+                    pricingId,
+                    sessionDate,
+                    startTime,
+                    endTime,
+                } = session;
 
                 //convert client's localtime to utc
                 const startTimeUTC = String(
@@ -341,6 +361,8 @@ export const createClientSessionsInBulk = asyncHandler(
                 const sessionCreated = await Session.create({
                     userId: userId,
                     vendorId: vendorId,
+                    recommendedServiceId: recommendedServiceId,
+                    pricingId: pricingId,
                     sessionDate: sessionDate,
                     startTimeUtc: startTimeUTC,
                     endTimeUtc: endTimeUTC,
@@ -535,6 +557,250 @@ export const getAllVendorSessions = asyncHandler(
             res.status(200).json({
                 success: true,
                 vendorSessions: sessionsWithLocalTime,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//get client's consultation request -- admin
+
+export const getClientConsultationRequests = asyncHandler(
+    async (
+        req: IGetClientConsultationRequests,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const adminUserId = req.user?.id;
+
+        if (!adminUserId) {
+            return next(new errorHandler("Login to access this resource", 400));
+        }
+
+        // const statusFilter = req.query?.status?.toString().toUpperCase();
+
+        // //valid status record
+        // const validStatuses: Record<string, string> = {
+        //     PENDING: "PENDING",
+        //     COMPLETED: "COMPLETED",
+        // };
+
+        // const status = validStatuses[statusFilter ?? ""] || "PENDING";
+
+        try {
+            //check for valid user
+            const { data: validAdminUser } = await axiosInstance.get(
+                `${process.env.API_GATEWAY_URL}/api/v1/users/externals/check-exist/user/${adminUserId}`,
+            );
+
+            if (!validAdminUser.success) {
+                return next(new errorHandler("Invalid user id", 400));
+            }
+
+            const requests = await ClientIntake.findAll({
+                // where: { status: status },
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+            });
+
+            res.status(200).json({
+                success: true,
+                requests,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//book consultation session by client
+export const bookConsultationSession = asyncHandler(
+    async (
+        req: IBookConsultationSessionRequest,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const {
+            name,
+            email,
+            phoneNumber,
+            ageGroup,
+            concern,
+            goal,
+            preferredDate,
+            startTime,
+            timeZone,
+        } = req.body;
+
+        const userId = req.user?.id;
+
+        if (
+            !name ||
+            !email ||
+            !phoneNumber ||
+            !ageGroup ||
+            !concern ||
+            !goal ||
+            !preferredDate ||
+            !startTime ||
+            !userId ||
+            !timeZone
+        ) {
+            return next(new errorHandler("Provide all fields", 400));
+        }
+
+        try {
+            //check for existing request
+            const request = await ClientIntake.findAll({
+                where: { userId: userId, status: { [Op.ne]: "COMPLETED" } },
+            });
+
+            if (request.length > 0) {
+                return next(
+                    new errorHandler(
+                        "Cannot book, A consultation already inprogress",
+                        400,
+                    ),
+                );
+            }
+
+            //convert start time to utc
+            const startTimeUTC = String(
+                LocalTimeToUTC({
+                    date: preferredDate,
+                    time: startTime,
+                    timeZone: timeZone,
+                }),
+            );
+
+            //insert the data to client intake model
+            await ClientIntake.create({
+                userId: userId,
+                name: name,
+                email: email,
+                phoneNumber: phoneNumber,
+                ageGroup: ageGroup,
+                concern: concern,
+                goal: goal,
+                preferredDate: preferredDate,
+                startTimeUtc: startTimeUTC,
+                timeZone: timeZone,
+            });
+
+            res.status(201).json({
+                success: true,
+                message: "Free Consultation booked successfully",
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//get available counselling admins by date controllers
+export const getAvailableCounsellingAdminsByDate = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const date = req.query?.date?.toString();
+
+        if (!date) {
+            return next(new errorHandler("Provide date field", 400));
+        }
+        try {
+            const { data: counsellingAdmins } = await axiosInstance.get(
+                `${process.env.API_GATEWAY_URL}/api/v1/users/externals/admin/counselling-admins`,
+            );
+
+            //Get all sessions on that date (that have a counselling admin assigned)
+            const sessionsOnDate = await Session.findAll({
+                where: {
+                    sessionDate: date,
+                    adminUserId: { [Op.ne]: null }, // Make sure admin is assigned
+                },
+                attributes: ["adminUserId"],
+            });
+
+            //Extract busy admin IDs
+            const busyAdminIds = sessionsOnDate.map(
+                (session) => session.adminUserId,
+            );
+
+            //Filter out busy admins
+            const availableCounsellingAdmins =
+                counsellingAdmins.counsellingAdmins.filter(
+                    (admin: any) => !busyAdminIds.includes(admin.id),
+                );
+
+            res.status(200).json({
+                success: true,
+                availableCounsellingAdmins,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//mark client-counselling admin session as COMPLETED
+export const markAdminSessionCompleted = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const { sessionId, adminUserId, userId } = req.body;
+
+        if (!sessionId || !adminUserId || !userId) {
+            return next(new errorHandler("Provide all the fields", 400));
+        }
+
+        try {
+            //create a package for the Client
+            const payload = {
+                adminUserId: adminUserId,
+                userId: userId,
+            };
+
+            const config = {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            };
+            const { data: createPackage } = await axiosInstance.post(
+                `${process.env.API_GATEWAY_URL}/api/v1/pricings/admin/packages/recommended/create`,
+                payload,
+                config,
+            );
+
+            if (!createPackage.success) {
+                return next(
+                    new errorHandler("Something went wrong. Try again", 400),
+                );
+            }
+
+            //mark session as COMPLETED
+            await Session.update(
+                { status: "COMPLETED" },
+                { where: { id: sessionId } },
+            );
+
+            res.status(200).json({
+                success: true,
             });
         } catch (error) {
             return next(

@@ -13,8 +13,9 @@ class RecommendedPackage extends Model<
 > {
     declare id?: string;
     declare userId: string;
-    declare adminId: string;
+    declare adminUserId: string;
     declare status?: string;
+    declare paymentStatus?: string;
     declare notes?: string;
     declare totalAmount: number;
 }
@@ -35,12 +36,18 @@ RecommendedPackage.init(
             unique: false,
         },
         //used admin's user id in the system not the admin id unlike client id or vendor id
-        adminId: {
+        adminUserId: {
             type: DataTypes.UUID,
             allowNull: false,
             unique: false,
         },
         status: {
+            type: DataTypes.STRING(200),
+            defaultValue: "PENDING",
+            allowNull: false,
+            unique: false,
+        },
+        paymentStatus: {
             type: DataTypes.STRING(200),
             defaultValue: "PENDING",
             allowNull: false,
@@ -60,8 +67,9 @@ RecommendedPackage.init(
     {
         sequelize,
         underscored: true,
-        modelName: "RecommendedService",
-        tableName: "recommended_services",
+        modelName: "RecommendedPackage",
+        tableName: "recommended_packages",
+        timestamps: true,
     },
 );
 export default RecommendedPackage;

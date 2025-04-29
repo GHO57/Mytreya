@@ -21,6 +21,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 //api routes
+import sessions from "./routes/session.routes";
+
+app.use("/", sessions);
 
 //error handling middleware
 app.use(errorHandlingMiddleware);

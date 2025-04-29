@@ -9,6 +9,7 @@ import {
     VendorApplication,
     Vendor,
     User,
+    Client,
 } from "../models";
 import {
     IGetAllRolesResponse,
@@ -811,8 +812,8 @@ export const getAllVendorApplications = asyncHandler(
 
         //building where clause
         const whereCondition = validStatuses.includes(applicationStatus)
-            ? { status: applicationStatus }
-            : {};
+            ? { status: applicationStatus, isDeleted: false }
+            : { isDeleted: false };
 
         const vendorApplications = await VendorApplication.findAll({
             where: whereCondition,
@@ -825,5 +826,41 @@ export const getAllVendorApplications = asyncHandler(
             count: vendorApplications.length,
             vendorApplications: vendorApplications,
         });
+    },
+);
+
+//get all clients
+export const getAllClients = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            //retrieve clients
+            const clients = await User.findAll({
+                include: [
+                    {
+                        model: Role,
+                        where: { roleName: "CLIENT" },
+                        attributes: ["roleName"],
+                    },
+                    {
+                        model: Client,
+                        attributes: { exclude: ["createdAt", "updatedAt"] },
+                    },
+                ],
+                attributes: ["email", "fullName"],
+                where: { isDeleted: false },
+            });
+
+            res.status(200).json({
+                success: true,
+                clients,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
     },
 );

@@ -9,10 +9,8 @@ export interface IAddServiceRequestBody {
 
 //create new package for client
 export interface ICreateNewPackageRequest extends Request {
-    user?: {
-        id: string;
-    };
     body: {
+        adminUserId: string;
         userId: string;
         notes?: string;
     };
@@ -42,8 +40,15 @@ export interface IGetRecommendedPackagesByUserId extends Request {
     user?: {
         id: string;
     };
-    params: {
-        userId: string;
+    // params: {
+    //     userId: string;
+    // };
+}
+
+//get all recommened packages interface -- GET
+export interface IGetAllRecommendedPackages extends Request {
+    user?: {
+        id: string;
     };
 }
 
@@ -66,5 +71,11 @@ export interface IConfirmPackageRequest extends Request {
     };
     params: {
         packageId: string;
+    };
+}
+
+export interface IGetPendingRecommendationsRequest extends Request {
+    user?: {
+        id: string;
     };
 }

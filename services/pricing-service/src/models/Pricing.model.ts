@@ -54,6 +54,7 @@ Pricing.init(
         underscored: true,
         modelName: "Pricing",
         tableName: "pricings",
+        timestamps: true,
     },
 );
 export default Pricing;

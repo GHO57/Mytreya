@@ -116,9 +116,6 @@ const PartnerRegistration = () => {
             ...(experience && { experience }),
         };
 
-        console.log(registrationData);
-        console.log(formState);
-
         // Dispatch redux action with clean payload
         reduxDispatch(vendorRegistration(registrationData))
             .unwrap()
@@ -318,7 +315,7 @@ const PartnerRegistration = () => {
                 >
                     <div className="flex flex-col gap-y-6">
                         <div className="flex items-center w-full gap-x-4">
-                            <div className="bg-primary xl:min-w-10 xl:min-h-10 flex-center rounded-full text-white font-bold">
+                            <div className="bg-primary min-w-10 min-h-10 max-h-10 max-w-10 w-full h-full flex-center rounded-full text-white font-bold">
                                 1
                             </div>
                             <h2 className="font-semibold text-lg w-full">
@@ -415,7 +412,7 @@ const PartnerRegistration = () => {
                     </div>
                     <div className="flex flex-col gap-y-6">
                         <div className="flex items-center w-full gap-x-4">
-                            <div className="bg-primary xl:min-w-10 xl:min-h-10 flex-center rounded-full text-white font-bold">
+                            <div className="bg-primary min-w-10 min-h-10 max-h-10 max-w-10 w-full h-full flex-center rounded-full text-white font-bold">
                                 2
                             </div>
                             <h2 className="font-semibold text-lg">
@@ -479,7 +476,7 @@ const PartnerRegistration = () => {
                     </div>
                     <div className="flex flex-col gap-y-6">
                         <div className="flex items-center w-full gap-x-4">
-                            <div className="bg-primary xl:min-w-10 xl:min-h-10 flex-center rounded-full text-white font-bold">
+                            <div className="bg-primary min-w-10 min-h-10 max-h-10 max-w-10 w-full h-full flex-center rounded-full text-white font-bold">
                                 3
                             </div>
                             <h2 className="font-semibold text-lg">
@@ -543,7 +540,7 @@ const PartnerRegistration = () => {
                     </div>
                     <div className="flex flex-col gap-y-6">
                         <div className="flex items-center w-full gap-x-4">
-                            <div className="bg-primary xl:min-w-10 xl:min-h-10 flex-center rounded-full text-white font-bold">
+                            <div className="bg-primary min-w-10 min-h-10 max-h-10 max-w-10 w-full h-full flex-center rounded-full text-white font-bold">
                                 4
                             </div>
                             <h2 className="font-semibold text-lg">
@@ -572,7 +569,7 @@ const PartnerRegistration = () => {
                     </div>
                     <div className="flex flex-col gap-y-6">
                         <div className="flex items-center w-full gap-x-4">
-                            <div className="bg-primary xl:min-w-10 xl:min-h-10 flex-center rounded-full text-white font-bold">
+                            <div className="bg-primary min-w-10 min-h-10 max-h-10 max-w-10 w-full h-full flex-center rounded-full text-white font-bold">
                                 5
                             </div>
                             <h2 className="font-semibold text-lg">

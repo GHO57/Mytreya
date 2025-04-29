@@ -1,21 +1,21 @@
 import { Request } from "express";
 
-//create client session with vendor interface -- POST
-export interface ICreateClientSessionRequest extends Request {
-    user?: {
-        id: string;
-    };
+//assign client with vendor interface -- POST
+export interface IAssignClientWithAdminRequest extends Request {
     body: {
-        vendorId: string;
+        userId?: string;
+        adminUserId?: string;
         sessionDate: string;
-        startTime: string;
-        endTime: string;
+        startTimeUTC: string;
         timeZone: string;
     };
 }
 
 interface session {
-    vendorId: string;
+    vendorId?: string;
+    adminUserId?: string;
+    recommendedServiceId?: string;
+    pricingId?: string;
     sessionDate: string;
     startTime: string;
     endTime: string;
@@ -68,4 +68,30 @@ export interface ILocalTimeToUTCInterface {
 export interface IUTCToLocalTimeInteface {
     dateTime: string;
     timeZone: string;
+}
+
+//get client counselling request interface -- GET
+export interface IGetClientConsultationRequests extends Request {
+    user?: {
+        id: string;
+    };
+}
+
+//book consultation session interface -- POST
+
+export interface IBookConsultationSessionRequest extends Request {
+    body: {
+        name: string;
+        email: string;
+        phoneNumber: number;
+        ageGroup: string;
+        concern: string;
+        goal: string;
+        preferredDate: string;
+        startTime: string;
+        timeZone: string;
+    };
+    user?: {
+        id: string;
+    };
 }

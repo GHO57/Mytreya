@@ -8,7 +8,7 @@ import { ChangeEventHandler } from "react";
 import { OverridableStringUnion } from "@mui/types";
 
 interface ICustomTextField {
-    label: string;
+    label?: string;
     labelId: string;
     type: string;
     variant?: TextFieldVariants;
@@ -22,6 +22,7 @@ interface ICustomTextField {
     multiline?: boolean;
     minRows?: number;
     maxLength?: number;
+    placeholder?: string;
 }
 
 const CustomTextField = ({
@@ -35,6 +36,7 @@ const CustomTextField = ({
     required,
     multiline = false,
     minRows = 1,
+    placeholder,
     maxLength,
 }: ICustomTextField) => {
     return (
@@ -66,6 +68,7 @@ const CustomTextField = ({
                     required={required}
                     multiline={multiline}
                     minRows={minRows}
+                    placeholder={placeholder}
                     slotProps={{
                         htmlInput: {
                             ...((type === "text" || type === "email") &&

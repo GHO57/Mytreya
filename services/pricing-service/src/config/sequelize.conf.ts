@@ -15,11 +15,11 @@ const sequelize = new Sequelize(
 const dbConnection = async () => {
     try {
         await sequelize.authenticate();
-        logger.info('"plans" DATABASE CONNECTED');
+        logger.info('"pricings" DATABASE CONNECTED');
         await sequelize.sync();
-        logger.info('"plans" DATABASE SYNCED');
+        logger.info('"pricings" DATABASE SYNCED');
     } catch (error) {
-        logger.error('"plans" DATABASE ERROR: ', error);
+        logger.error('"pricings" DATABASE ERROR: ', error);
     }
 };
 

@@ -14,8 +14,7 @@ class RecommendedService extends Model<
     InferCreationAttributes<RecommendedService>
 > {
     declare id?: string;
-    // declare userId: string;
-    // declare adminId: string;
+    declare vendorId?: string;
     declare pricingId: ForeignKey<string>;
     declare packageId: ForeignKey<string>;
     declare monthNumber: number;
@@ -34,17 +33,11 @@ RecommendedService.init(
                 isUUID: 4,
             },
         },
-        // userId: {
-        //     type: DataTypes.UUID,
-        //     allowNull: false,
-        //     unique: false,
-        // },
-        //used admin's user id in the system not the admin id unlike client id or vendor id
-        // adminId: {
-        //     type: DataTypes.UUID,
-        //     allowNull: false,
-        //     unique: false,
-        // },
+        vendorId: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            unique: false,
+        },
         pricingId: {
             type: DataTypes.UUID,
             allowNull: false,
@@ -90,6 +83,7 @@ RecommendedService.init(
         underscored: true,
         modelName: "RecommendedService",
         tableName: "recommended_services",
+        timestamps: true,
     },
 );
 export default RecommendedService;

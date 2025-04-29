@@ -13,6 +13,7 @@ import {
     approveVendorApplication,
     rejectVendorApplication,
     getAllVendorApplications,
+    getAllClients,
 } from "../controllers/admin.controllers";
 import {
     checkPermission,
@@ -141,5 +142,7 @@ router
 router
     .route("/vendor-applications")
     .get(isAuthenticated, getAllVendorApplications);
+
+router.route("/clients").get(isAuthenticated, getAllClients);
 
 export default router;

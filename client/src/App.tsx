@@ -30,6 +30,20 @@ import AvailabilityListing from "./components/Vendor/AvailabilityListing/Availab
 import VendorDashboardHome from "./components/Vendor/VendorDashboardHome/VendorDashboardHome";
 import VendorDashboardLayout from "./layouts/VendorDashboardLayout/VendorDashboardLayout";
 import VendorSessions from "./components/Vendor/VendorSessions/VendorSessions";
+import AdminDashboardLayout from "./layouts/AdminDashboardLayout/AdminDashboardLayout";
+import AdminDashboardHome from "./components/Admin/AdminDashboardHome/AdminDashboardHome";
+import PackageRecommendation from "./components/Admin/PackageRecommendation/PackageRecommendation";
+import CounsellingRequest from "./components/Admin/CounsellingRequest/CounsellingRequest";
+import {
+    clearClientError,
+    clearClientMessage,
+} from "./features/client/clientSlice";
+import {
+    clearAdminError,
+    clearAdminMessage,
+} from "./features/admin/adminSlice";
+import ManageVendorApplications from "./components/Admin/ManageVendorApplications/ManageVendorApplications";
+import ConfirmPackage from "./components/Client/ConfirmPackage.tsx/ConfirmPackage";
 
 const AppContent = () => {
     const location = useLocation();
@@ -41,6 +55,14 @@ const AppContent = () => {
     );
     const { vendorLoading, vendorMessage, vendorError } = useSelector(
         (state: RootState) => state.vendor,
+    );
+
+    const { clientLoading, clientMessage, clientError } = useSelector(
+        (state: RootState) => state.client,
+    );
+
+    const { adminLoading, adminMessage, adminError } = useSelector(
+        (state: RootState) => state.admin,
     );
 
     const showHeaderFooter =
@@ -56,17 +78,25 @@ const AppContent = () => {
         if (
             (!loadingLogin && message) ||
             (!loading && message) ||
-            (!vendorLoading && vendorMessage)
+            (!vendorLoading && vendorMessage) ||
+            (!clientLoading && clientMessage) ||
+            (!adminLoading && adminMessage)
         ) {
             toast.dismiss();
-            toast.success(message || vendorMessage);
+            toast.success(
+                message || vendorMessage || clientMessage || adminMessage,
+            );
 
             if (message) dispatch(clearUserMessage());
             if (vendorMessage) dispatch(clearVendorMessage());
+            if (clientMessage) dispatch(clearClientMessage());
+            if (adminMessage) dispatch(clearAdminMessage());
         } else if (
             (!loadingLogin && error) ||
             (!loading && error) ||
-            (!vendorLoading && vendorError)
+            (!vendorLoading && vendorError) ||
+            (!clientLoading && clientError) ||
+            (!adminLoading && adminError)
         ) {
             if (error) {
                 toast.dismiss();
@@ -76,6 +106,14 @@ const AppContent = () => {
                 toast.dismiss();
                 toast.error(vendorError);
                 dispatch(clearVendorError());
+            } else if (clientError) {
+                toast.dismiss();
+                toast.error(clientError);
+                dispatch(clearClientError());
+            } else if (adminError) {
+                toast.dismiss();
+                toast.error(adminError);
+                dispatch(clearAdminError());
             }
         }
     }, [
@@ -87,6 +125,12 @@ const AppContent = () => {
         vendorLoading,
         vendorMessage,
         vendorError,
+        clientLoading,
+        clientMessage,
+        clientError,
+        adminLoading,
+        adminMessage,
+        adminError,
     ]);
     return (
         <>
@@ -116,8 +160,12 @@ const AppContent = () => {
                     <Route path="/dashboard" element={<DashboardLayout />}>
                         <Route index element={<DashboardHome />} />
                         <Route path="sessions" element={<Sessions />} />
-                        <Route path="services" element={<Services />} />
+                        <Route path="packages" element={<Services />} />
                     </Route>
+                    <Route
+                        path="packages/:packageId/confirm"
+                        element={<ConfirmPackage />}
+                    />
 
                     {/* vendor routes */}
                     <Route
@@ -134,6 +182,26 @@ const AppContent = () => {
                             element={<AvailabilityListing />}
                         />
                         <Route path="sessions" element={<VendorSessions />} />
+                    </Route>
+
+                    {/* admin routes */}
+                    <Route
+                        path="/admin/dashboard"
+                        element={<AdminDashboardLayout />}
+                    >
+                        <Route index element={<AdminDashboardHome />} />
+                        <Route
+                            path="package-recommendation"
+                            element={<PackageRecommendation />}
+                        />
+                        <Route
+                            path="counselling-request"
+                            element={<CounsellingRequest />}
+                        />
+                        <Route
+                            path="vendor-applications"
+                            element={<ManageVendorApplications />}
+                        />
                     </Route>
                 </Routes>
             </div>

@@ -12,7 +12,10 @@ class Session extends Model<
 > {
     declare id?: string;
     declare userId: string;
-    declare vendorId: string;
+    declare vendorId?: string;
+    declare adminUserId?: string | null;
+    declare pricingId?: string;
+    declare recommendedServiceId?: string;
     declare sessionDate: string;
     declare startTimeUtc: string;
     declare endTimeUtc: string;
@@ -41,7 +44,22 @@ Session.init(
         vendorId: {
             type: DataTypes.UUID,
             unique: false,
-            allowNull: false,
+            allowNull: true,
+        },
+        adminUserId: {
+            type: DataTypes.UUID,
+            unique: false,
+            allowNull: true,
+        },
+        pricingId: {
+            type: DataTypes.UUID,
+            unique: false,
+            allowNull: true,
+        },
+        recommendedServiceId: {
+            type: DataTypes.UUID,
+            unique: false,
+            allowNull: true,
         },
         sessionDate: {
             type: DataTypes.DATEONLY,
@@ -67,22 +85,22 @@ Session.init(
         customerJoinTimeUtc: {
             type: DataTypes.STRING(100),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         customerLastActiveUtc: {
             type: DataTypes.STRING(100),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         vendorJoinTimeUtc: {
             type: DataTypes.STRING(100),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
         vendorLastActiveUtc: {
             type: DataTypes.STRING(100),
             unique: false,
-            allowNull: false,
+            allowNull: true,
         },
     },
     {
@@ -90,6 +108,7 @@ Session.init(
         underscored: true,
         modelName: "Session",
         tableName: "sessions",
+        timestamps: true,
     },
 );
 export default Session;

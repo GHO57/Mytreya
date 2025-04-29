@@ -1,6 +1,6 @@
 import asyncHandler from "../middleware/asyncHandler.middleware";
 import errorHandler from "../utils/errorHandler.utils";
-import { Vendor, User, VendorAvailability } from "../models";
+import { Vendor, User, VendorAvailability, Role } from "../models";
 import { Request, Response, NextFunction } from "express";
 import {
     IIsVendorAvailableRequestBody,
@@ -152,6 +152,37 @@ export const getVendorId = asyncHandler(
             res.status(200).json({
                 success: true,
                 vendorId: vendor.id,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//get all counselling admins
+export const getAllCounsellingAdmins = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            //get all counselling admins
+            const counsellingAdmins = await User.findAll({
+                include: [
+                    {
+                        model: Role,
+                        where: { roleName: "COUNSELLING_ADMIN" },
+                        attributes: ["roleName"],
+                    },
+                ],
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+            });
+
+            res.status(200).json({
+                success: true,
+                counsellingAdmins,
             });
         } catch (error) {
             return next(
