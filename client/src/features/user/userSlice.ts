@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { loadUser, login, signup } from "./userThunks";
+import { loadUser, login, logoutUser, signup } from "./userThunks";
 import {
     ErrorResponse,
     IUserDashboardResponse,
@@ -96,6 +96,42 @@ const userSlice = createSlice({
                         action.payload?.message || "Something went wrong";
                 },
             )
+            /*
+            *
+            logout user
+            *
+            */
+            //logout user -- pending
+            .addCase(logoutUser.pending, (state) => {
+                state.loading = true;
+                state.message = null;
+                state.error = null;
+            })
+            //logout user -- fulfilled
+            .addCase(
+                logoutUser.fulfilled,
+                (
+                    state,
+                    action: PayloadAction<{
+                        success: boolean;
+                        message: string;
+                    }>,
+                ) => {
+                    state.loading = false;
+                    state.isAuthenticated = false;
+                    state.user = null;
+                    state.message = null;
+                    state.error = null;
+                },
+            )
+            //logout user -- rejected
+            .addCase(logoutUser.rejected, (state) => {
+                state.loading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                state.error = null;
+                state.message = null;
+            })
             /*
             *
             load user

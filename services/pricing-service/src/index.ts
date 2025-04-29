@@ -13,7 +13,7 @@ const startServer = async () => {
 
         server.listen(process.env.PORT, () => {
             logger.info(
-                `"plan-service" SERVER IS RUNNING AT ${process.env.HOST}:${process.env.PORT}/`,
+                `"pricing-service" SERVER IS RUNNING AT ${process.env.HOST}:${process.env.PORT}/`,
             );
         });
     } catch (error) {

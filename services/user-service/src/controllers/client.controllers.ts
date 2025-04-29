@@ -5,7 +5,7 @@ import {
     IClientDashboardRequest,
     IClientOnboardRequestBody,
 } from "../interfaces/client.interfaces";
-import { Role, Client, User } from "../models";
+import { Role, Client, User, Vendor } from "../models";
 import { sequelize } from "../config/sequelize.conf";
 import logger from "../utils/logger.utils";
 

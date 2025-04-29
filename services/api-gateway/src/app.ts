@@ -33,11 +33,11 @@ app.use(
     }),
 );
 
-//proxy to plan-service
+//proxy to pricing-service
 app.use(
-    "/api/v1/plans",
+    "/api/v1/pricings",
     createProxyMiddleware<Request, Response>({
-        target: process.env.PLAN_SERVICE_URL,
+        target: process.env.PRICING_SERVICE_URL,
         changeOrigin: true,
         on: {
             proxyReq: fixRequestBody,

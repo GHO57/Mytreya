@@ -72,9 +72,9 @@ const vendorSlice = createSlice({
                 ) => {
                     state.vendorLoading = false;
                     state.vendorAvailabilities.currentWeekSlots =
-                        action.payload.currentWeekSlots;
+                        action.payload.currentWeekSlots || [];
                     state.vendorAvailabilities.nextWeekSlots =
-                        action.payload.nextWeekSlots;
+                        action.payload.nextWeekSlots || [];
                 },
             )
             //get vendor availabilities -- rejected

@@ -64,6 +64,31 @@ export const signup = createAsyncThunk<
     }
 });
 
+//logout user -- POST
+
+export const logoutUser = createAsyncThunk<
+    { success: boolean; message: string },
+    void,
+    { rejectValue: ErrorResponse }
+>("user/logout", async (_, thunkAPI) => {
+    try {
+        const { data } = await axiosInstance.post<{
+            success: boolean;
+            message: string;
+        }>("/api/v1/users/auth/logout");
+
+        return data;
+    } catch (error) {
+        const axiosError = error as AxiosError<ErrorResponse>;
+
+        if (axiosError.response && axiosError.response.data) {
+            return thunkAPI.rejectWithValue(axiosError.response.data);
+        }
+
+        return thunkAPI.rejectWithValue(axiosError);
+    }
+});
+
 //load user -- POST
 
 export const loadUser = createAsyncThunk<

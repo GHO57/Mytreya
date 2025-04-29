@@ -2,11 +2,15 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { thunk } from "redux-thunk";
 import userReducer from "./features/user/userSlice";
 import vendorReducer from "./features/vendor/vendorSlice";
+import adminReducer from "./features/admin/adminSlice";
+import clientReducer from "./features/client/clientSlice";
 
 //combine reducers
 const rootReducer = combineReducers({
     user: userReducer,
+    client: clientReducer,
     vendor: vendorReducer,
+    admin: adminReducer,
 });
 
 //configure store

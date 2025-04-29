@@ -852,3 +852,49 @@ export const vendorDashboard = asyncHandler(
         }
     },
 );
+
+//get vendors based on category
+export const getVendorsByCategory = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const category = req.query?.category?.toString() || "";
+
+        try {
+            //get vendors
+            const vendorsInfo = await Vendor.findAll({
+                where: { category: category },
+                include: [
+                    {
+                        model: User,
+                        attributes: ["fullName"],
+                    },
+                ],
+                attributes: ["id", "userId", "category"],
+            });
+
+            let vendors = [];
+
+            for (const vendor of vendorsInfo) {
+                const data = {
+                    id: vendor.id,
+                    userId: vendor.userId,
+                    fullName: vendor.User.fullName,
+                    category: vendor.category,
+                };
+
+                vendors.push(data);
+            }
+
+            res.status(200).json({
+                success: true,
+                vendors,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);

@@ -1,18 +1,21 @@
 import { Request, Response, NextFunction } from "express";
 import asyncHandler from "../middleware/asyncHandler.middleware";
 import errorHandler from "../utils/errorHandler.utils";
-import Pricing from "../models/Pricing.model";
 import {
     IAddRecommendedServices,
     IAddServiceRequestBody,
     IConfirmPackageRequest,
     ICreateNewPackageRequest,
+    IGetAllRecommendedPackages,
+    IGetPendingRecommendationsRequest,
     IGetRecommendedPackagesByUserId,
     IGetRecommendedPackagesForClient,
     IGetRecommendedServicesByPackageId,
 } from "../interfaces/pricing.interfaces";
 import axiosInstance from "../utils/axiosInstance.utils";
-import { RecommendedPackage, RecommendedService } from "../models";
+import { Pricing, RecommendedPackage, RecommendedService } from "../models";
+import logger from "../utils/logger.utils";
+import { Op } from "sequelize";
 
 /*
 *
@@ -38,7 +41,19 @@ export const getRecommendedServicesByPackageId = asyncHandler(
         try {
             //get all recommended services by package id
             const services = await RecommendedService.findAll({
-                where: { packageId: packageId },
+                where: { packageId: packageId, status: "PENDING" },
+                attributes: [
+                    "id",
+                    "pricingId",
+                    "monthNumber",
+                    "sessionCount",
+                    "notes",
+                ],
+            });
+
+            services.forEach((service) => {
+                service.monthNumber = Number(service.monthNumber);
+                service.sessionCount = Number(service.sessionCount);
             });
 
             res.status(200).json({
@@ -64,6 +79,47 @@ counselling admin related controllers
 *
 */
 
+//get all pending packages from client with respect to counselling adminUserId
+export const getPendingRecommendations = asyncHandler(
+    async (
+        req: IGetPendingRecommendationsRequest,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const adminUserId = req.user?.id;
+
+        if (!adminUserId) {
+            return next(new errorHandler("Login to access this resource", 400));
+        }
+
+        try {
+            // get all pending recommendations' user details
+            const pendingRecommendations = await RecommendedPackage.findAll({
+                where: { adminUserId: adminUserId, status: "PENDING" },
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+            });
+
+            const services = await Pricing.findAll({
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+                where: { active: true },
+            });
+
+            res.status(200).json({
+                success: true,
+                pendingRecommendations,
+                services,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
 //create new package for clients -- counselling admin
 export const createClientPackage = asyncHandler(
     async (
@@ -71,14 +127,9 @@ export const createClientPackage = asyncHandler(
         res: Response,
         next: NextFunction,
     ) => {
-        const adminUserId = req.user?.id;
-        const { userId, notes } = req.body;
+        const { adminUserId, userId, notes } = req.body;
 
-        if (!adminUserId) {
-            return next(new errorHandler("Login to access this resource", 400));
-        }
-
-        if (!userId) {
+        if (!userId || !adminUserId) {
             return next(new errorHandler("Provide all fields", 400));
         }
 
@@ -104,7 +155,7 @@ export const createClientPackage = asyncHandler(
             //create a new empty package
             await RecommendedPackage.create({
                 userId: userId,
-                adminId: adminUserId,
+                adminUserId: adminUserId,
                 notes: notes,
                 totalAmount: 0,
             });
@@ -131,7 +182,7 @@ export const addRecommendServices = asyncHandler(
         const { packageId, services } = req.body;
 
         if (!Array.isArray(services) || services.length <= 0) {
-            return next(new errorHandler("Provide valid plans", 400));
+            return next(new errorHandler("Provide valid services", 400));
         }
 
         try {
@@ -166,34 +217,68 @@ export const addRecommendServices = asyncHandler(
                 //update the total amount
                 totalAmount = totalAmount + servicePrice * sessionCount;
 
-                //find existing service recommendation
-                const existing = await RecommendedService.findOne({
-                    where: {
-                        packageId: packageId,
-                        pricingId: pricingId,
-                        monthNumber: monthNumber,
-                        status: "PENDING",
-                    },
+                // //find existing service recommendation
+                // const existing = await RecommendedService.findOne({
+                //     where: {
+                //         packageId: packageId,
+                //         pricingId: pricingId,
+                //         monthNumber: monthNumber,
+                //         status: "PENDING",
+                //     },
+                // });
+
+                // //either update the session count and notes or create a new record
+                // if (existing) {
+                //     await existing.update({
+                //         sessionCount,
+                //         notes: notes,
+                //     });
+                //     savedRecommendations.push(existing);
+                // } else {
+                //     const saved = await RecommendedService.create({
+                //         packageId: packageId,
+                //         pricingId: pricingId,
+                //         monthNumber: monthNumber,
+                //         sessionCount: sessionCount,
+                //         notes: notes,
+                //     });
+
+                //     savedRecommendations.push(saved);
+                // }
+                //
+                savedRecommendations.push({
+                    packageId: packageId,
+                    pricingId: pricingId,
+                    monthNumber: monthNumber,
+                    sessionCount: sessionCount,
+                    notes: notes,
                 });
+            }
 
-                //either update the session count and notes or create a new record
-                if (existing) {
-                    await existing.update({
-                        sessionCount,
-                        notes: notes,
-                    });
-                    savedRecommendations.push(existing);
-                } else {
-                    const saved = await RecommendedService.create({
-                        packageId: packageId,
-                        pricingId: pricingId,
-                        monthNumber: monthNumber,
-                        sessionCount: sessionCount,
-                        notes: notes,
-                    });
+            if (services.length !== savedRecommendations.length) {
+                return next(
+                    new errorHandler("Cannot add services. Try again", 400),
+                );
+            }
 
-                    savedRecommendations.push(saved);
-                }
+            //delete existing pending entries
+            await RecommendedService.destroy({
+                where: {
+                    packageId: packageId,
+                    status: { [Op.in]: ["PENDING", "DRAFTED"] },
+                },
+            });
+
+            for (const service of savedRecommendations) {
+                const { pricingId, monthNumber, sessionCount, notes } = service;
+
+                const saved = await RecommendedService.create({
+                    packageId: packageId,
+                    pricingId: pricingId,
+                    monthNumber: monthNumber,
+                    sessionCount: sessionCount,
+                    notes: notes,
+                });
             }
 
             //update the package's total amount
@@ -205,7 +290,6 @@ export const addRecommendServices = asyncHandler(
             res.status(201).json({
                 success: true,
                 message: "Recommended services saved successfully",
-                recommendations: savedRecommendations,
             });
         } catch (error) {
             return next(
@@ -226,7 +310,54 @@ export const getRecommendedPackagesByUserId = asyncHandler(
         next: NextFunction,
     ) => {
         const adminUserId = req.user?.id;
-        const userId = req.params;
+        const userId = req.params.userId;
+
+        if (!adminUserId) {
+            return next(new errorHandler("Login to access this resource", 400));
+        }
+
+        if (!userId) {
+            return next(new errorHandler("Provide user id", 400));
+        }
+
+        try {
+            //check admin user validity
+            const { data: validAdmin } = await axiosInstance.get(
+                `${process.env.API_GATEWAY_URL}/api/v1/users/externals/check-exist/user/${adminUserId}`,
+            );
+
+            if (!validAdmin) {
+                return next(new errorHandler("Invalid admin user", 400));
+            }
+
+            //get all recommended packages by client userId
+            const packages = await RecommendedPackage.findAll({
+                where: { userId: userId, adminUserId: adminUserId },
+            });
+
+            res.status(200).json({
+                success: true,
+                recommendedPackages: packages,
+            });
+        } catch (error) {
+            return next(
+                new errorHandler(
+                    `${process.env.NODE_ENV !== "production" && error instanceof Error ? error.message : "Something Went Wrong"}`,
+                    500,
+                ),
+            );
+        }
+    },
+);
+
+//get all recommended packages -- couselling admin
+export const getAllRecommendedPackages = asyncHandler(
+    async (
+        req: IGetAllRecommendedPackages,
+        res: Response,
+        next: NextFunction,
+    ) => {
+        const adminUserId = req.user?.id;
 
         if (!adminUserId) {
             return next(new errorHandler("Login to access this resource", 400));
@@ -242,9 +373,10 @@ export const getRecommendedPackagesByUserId = asyncHandler(
                 return next(new errorHandler("Invalid admin user", 400));
             }
 
-            //get all recommended packages by client userId
+            //get all recommended packages
             const packages = await RecommendedPackage.findAll({
-                where: { userId: userId, adminId: adminUserId },
+                where: { adminUserId: adminUserId },
+                attributes: { exclude: ["createdAt, updatedAt"] },
             });
 
             res.status(200).json({
@@ -350,6 +482,22 @@ export const addService = asyncHandler(
     },
 );
 
+//get all services from pricings table
+export const getAllServices = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const services = await Pricing.findAll({
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+            });
+
+            res.status(200).json({
+                success: true,
+                services,
+            });
+        } catch (error) {}
+    },
+);
+
 /*
 *
 *
@@ -384,11 +532,18 @@ export const getRecommendedPackagesForClient = asyncHandler(
             //get all recommended packages by client userId
             const packages = await RecommendedPackage.findAll({
                 where: { userId: userId },
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+            });
+
+            const services = await Pricing.findAll({
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+                where: { active: true },
             });
 
             res.status(200).json({
                 success: true,
                 recommendedPackages: packages,
+                pricings: services,
             });
         } catch (error) {
             return next(

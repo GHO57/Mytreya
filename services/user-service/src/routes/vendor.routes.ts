@@ -2,6 +2,7 @@ import express from "express";
 import {
     addVendorAvailabilitySlot,
     addVendorAvailabilitySlotBulk,
+    getVendorsByCategory,
     removeVendorAvailabilitySlot,
     vendorApplication,
     vendorDashboard,
@@ -31,4 +32,7 @@ router.route("/availability-slot/").get(viewAllAvailableSlots);
 
 //vendor dashboard
 router.route("/dashboard").get(isAuthenticated, vendorDashboard);
+
+//get vendors by category
+router.route("/").get(getVendorsByCategory);
 export default router;

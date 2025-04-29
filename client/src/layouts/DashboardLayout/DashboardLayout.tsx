@@ -53,7 +53,7 @@ const DashboardLayout = () => {
 
     return (
         <>
-            <div className="flex justify-center w-full max-h-screen">
+            <div className="flex justify-center w-full max-h-screen min-h-screen">
                 <div
                     className={`xl:max-w-[1280px] w-full flex flex-1 overflow-hidden`}
                 >
@@ -150,9 +150,7 @@ const DashboardLayout = () => {
                     <div className="flex-1 px-2 py-4 overflow-y-auto">
                         <Breadcrumbs>
                             {locationPaths.map((path) => (
-                                <>
-                                    <div>{path}</div>
-                                </>
+                                <div key={path}>{path}</div>
                             ))}
                         </Breadcrumbs>
                         <Outlet />

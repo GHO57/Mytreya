@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Button, Tab, Tabs } from "@mui/material";
+import { Button } from "@mui/material";
 import CustomTable, { Column } from "../../../layouts/CustomTable/CustomTable";
+import { CustomTab, CustomTabPanel } from "../../../layouts/TabView/TabView";
 
 const columns: Column[] = [
     { id: "id", label: "Id" },
@@ -94,22 +95,6 @@ const sampleData = [
     },
 ];
 
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
-}
-
-function CustomTabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-
-    return (
-        <div role="tabpanel" hidden={value !== index} {...other}>
-            {value === index && <>{children}</>}
-        </div>
-    );
-}
-
 const tabs = ["Upcoming Sessions", "Completed Sessions"];
 
 const VendorSessions = () => {
@@ -121,18 +106,11 @@ const VendorSessions = () => {
     return (
         <>
             <div>
-                <Tabs
-                    value={tabValue}
-                    onChange={handleTabChange}
-                    indicatorColor="secondary"
-                    textColor="secondary"
-                    variant="scrollable"
-                    scrollButtons="auto"
-                >
-                    {tabs.map((tab, index) => (
-                        <Tab key={tab} value={index} label={tab} id={tab} />
-                    ))}
-                </Tabs>
+                <CustomTab
+                    tabValue={tabValue}
+                    handleTabChange={handleTabChange}
+                    tabs={tabs}
+                />
                 <CustomTabPanel index={0} value={tabValue}>
                     <CustomTable
                         columns={columns}
@@ -140,6 +118,7 @@ const VendorSessions = () => {
                         emptyMessage="No Sessions"
                     />
                 </CustomTabPanel>
+
                 <CustomTabPanel index={1} value={tabValue}>
                     completed sessions
                 </CustomTabPanel>

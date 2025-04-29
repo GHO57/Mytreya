@@ -18,35 +18,35 @@ export const clientLinks: IClientLinks[] = [
         name: "Sessions",
         path: "dashboard/sessions",
         icon: "CalendarMonthIcon",
-        subpaths: [
-            {
-                name: "Ongoing Sessions",
-                path: "dashboard/sessions/ongoing",
-            },
-            {
-                name: "Completed Sessions",
-                path: "dashboard/sessions/completed",
-            },
-        ],
+        // subpaths: [
+        //     {
+        //         name: "Ongoing Sessions",
+        //         path: "dashboard/sessions/ongoing",
+        //     },
+        //     {
+        //         name: "Completed Sessions",
+        //         path: "dashboard/sessions/completed",
+        //     },
+        // ],
     },
     {
-        name: "Services",
-        path: "dashboard/services",
+        name: "Packages",
+        path: "dashboard/packages",
         icon: "AssignmentIcon",
-        subpaths: [
-            {
-                name: "Recommended Services",
-                path: "dashboard/services/completed",
-            },
-            {
-                name: "Ongoing Services",
-                path: "dashboard/services/ongoing",
-            },
-            {
-                name: "Completed Services",
-                path: "dashboard/services/completed",
-            },
-        ],
+        // subpaths: [
+        //     {
+        //         name: "Recommended Services",
+        //         path: "dashboard/services/completed",
+        //     },
+        //     {
+        //         name: "Ongoing Services",
+        //         path: "dashboard/services/ongoing",
+        //     },
+        //     {
+        //         name: "Completed Services",
+        //         path: "dashboard/services/completed",
+        //     },
+        // ],
     },
     {
         name: "Transactions",

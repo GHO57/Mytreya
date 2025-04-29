@@ -3,15 +3,17 @@ import { Link } from "react-router-dom";
 import useWindowDimensions from "../../hooks/useWindowDimensions";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
-import { Avatar, Button } from "@mui/material";
+import { Button } from "@mui/material";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
+import Account from "../Account/Account";
+import BookFreeConsultation from "../../components/User/BookFreeConsultation/BookFreeConsultation";
 
 const Header = () => {
     const { width } = useWindowDimensions();
 
     const [toggleMenu, setToggleMenu] = useState<boolean>(false);
+    const [modalOpen, setModalOpen] = useState<boolean>(false);
 
     const { isAuthenticated, user } = useSelector(
         (state: RootState) => state.user,
@@ -28,6 +30,10 @@ const Header = () => {
 
     const handleMenuToggle = () => {
         setToggleMenu((prev) => !prev);
+    };
+
+    const handleModelOpen = () => {
+        setModalOpen(true);
     };
 
     return (
@@ -103,14 +109,23 @@ const Header = () => {
                     )}
                     {isAuthenticated ? (
                         <>
-                            <Link
-                                to={`${baseLocation}/dashboard`}
-                                className="flex-center"
-                            >
-                                <Avatar alt={fullName}>
-                                    <PersonRoundedIcon />
-                                </Avatar>
-                            </Link>
+                            <div>
+                                {roleName === "CLIENT" && (
+                                    <>
+                                        <Button
+                                            variant="contained"
+                                            onClick={handleModelOpen}
+                                        >
+                                            Book Free Consultation
+                                        </Button>
+                                        <BookFreeConsultation
+                                            open={modalOpen}
+                                            onClose={() => setModalOpen(false)}
+                                        />
+                                    </>
+                                )}
+                                <Account />
+                            </div>
                         </>
                     ) : (
                         <div className="flex gap-4 lg:gap-6">

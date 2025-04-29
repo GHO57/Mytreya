@@ -21,6 +21,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 //api routes
+import pricing from "./routes/pricing.routes";
+
+app.use("/", pricing);
 
 //error handling middleware
 app.use(errorHandlingMiddleware);
